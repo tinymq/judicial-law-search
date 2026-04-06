@@ -1,0 +1,419 @@
+/**
+ * 管理后台样式优化 - 方案A（CSS覆盖）
+ *
+ * 设计理念：精致官僚现代主义
+ * - 字体：Noto Serif SC + Noto Sans SC（已在全局引入）
+ * - 配色：米白背景 + 朱红色强调
+ * - 保持所有原有功能不变
+ */
+
+/* ========== 全局样式覆盖 ========== */
+
+.admin-optimized {
+  /* 字体 */
+  font-family: var(--font-body, 'Noto Sans SC', sans-serif);
+}
+
+.admin-optimized h1,
+.admin-optimized h2,
+.admin-optimized h3 {
+  font-family: var(--font-display, 'Noto Serif SC', serif);
+}
+
+/* ========== 背景色 ========== */
+
+.admin-optimized {
+  background-color: #faf8f5 !important; /* 米白色 */
+}
+
+/* 顶部导航栏 */
+.admin-optimized header {
+  background-color: #ffffff !important;
+  border-bottom-color: #c8302b !important; /* 朱红色 */
+  border-bottom-width: 3px !important;
+}
+
+/* 侧边栏 */
+.admin-optimized .w-56 {
+  background-color: #f5f3f0 !important; /* 浅灰米色 */
+}
+
+/* 卡片/表格容器 */
+.admin-optimized .bg-white {
+  background-color: #ffffff !important;
+}
+
+.admin-optimized .bg-slate-50 {
+  background-color: #faf8f5 !important;
+}
+
+.admin-optimized .bg-slate-100 {
+  background-color: #f5f3f0 !important;
+}
+
+/* ========== 边框颜色 ========== */
+
+.admin-optimized .border-slate-200 {
+  border-color: #e8e6e3 !important;
+}
+
+.admin-optimized .border-slate-100 {
+  border-color: #f0ede9 !important;
+}
+
+/* ========== 文字颜色 ========== */
+
+.admin-optimized .text-slate-900 {
+  color: #1a1a1a !important;
+}
+
+.admin-optimized .text-slate-700 {
+  color: #6b6b6b !important;
+}
+
+.admin-optimized .text-slate-600 {
+  color: #6b6b6b !important;
+}
+
+.admin-optimized .text-slate-500 {
+  color: #6b6b6b !important;
+}
+
+.admin-optimized .text-slate-400 {
+  color: #9b9b9b !important;
+}
+
+/* ========== 主色调：蓝色 → 朱红色 ========== */
+
+/* 主按钮 */
+.admin-optimized .bg-blue-600 {
+  background-color: #c8302b !important;
+}
+
+.admin-optimized .hover\:bg-blue-700:hover {
+  background-color: #a82723 !important;
+}
+
+.admin-optimized .shadow-blue-200 {
+  box-shadow: 0 1px 2px rgba(200, 48, 43, 0.1) !important;
+}
+
+/* 链接颜色 */
+.admin-optimized .hover\:text-blue-600:hover {
+  color: #c8302b !important;
+}
+
+.admin-optimized .text-blue-600 {
+  color: #c8302b !important;
+}
+
+/* 焦点环 */
+.admin-optimized .focus\:ring-blue-500:focus,
+.admin-optimized .focus\:ring-1:focus {
+  --tw-ring-color: #c8302b !important;
+}
+
+.admin-optimized .focus\:ring-2:focus {
+  --tw-ring-color: rgba(200, 48, 43, 0.5) !important;
+}
+
+/* ========== 按钮优化 ========== */
+
+.admin-optimized button {
+  transition: all 0.2s ease;
+}
+
+.admin-optimized button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(200, 48, 43, 0.15);
+}
+
+.admin-optimized button:active {
+  transform: translateY(0);
+}
+
+/* ========== 表格优化 ========== */
+
+/* 表头 */
+.admin-optimized thead {
+  background: linear-gradient(to bottom, #faf8f5, #f5f3f0) !important;
+}
+
+.admin-optimized th {
+  font-family: var(--font-display, 'Noto Serif SC', serif) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em;
+}
+
+/* 表格行悬停 */
+.admin-optimized tbody tr:hover {
+  background-color: rgba(200, 48, 43, 0.03) !important;
+}
+
+/* 表格行过渡动画 */
+.admin-optimized tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+/* ========== 输入框优化 ========== */
+
+.admin-optimized input,
+.admin-optimized select {
+  transition: all 0.2s ease;
+}
+
+.admin-optimized input:focus,
+.admin-optimized select:focus {
+  background-color: #ffffff !important;
+}
+
+/* ========== 搜索框优化 ========== */
+
+.admin-optimized input[type="text"] {
+  background-color: #faf8f5 !important;
+  border-color: #e8e6e3 !important;
+}
+
+.admin-optimized input[type="text"]:focus {
+  background-color: #ffffff !important;
+  border-color: #c8302b !important;
+  box-shadow: 0 0 0 3px rgba(200, 48, 43, 0.1) !important;
+}
+
+/* ========== 标签/徽章优化 ========== */
+
+/* 效力位阶标签 */
+.admin-optimized .bg-red-50 {
+  background-color: rgba(200, 48, 43, 0.1) !important;
+}
+
+.admin-optimized .text-red-600 {
+  color: #c8302b !important;
+}
+
+.admin-optimized .border-red-100 {
+  border-color: rgba(200, 48, 43, 0.2) !important;
+}
+
+/* 其他标签保持原有颜色，但优化透明度 */
+.admin-optimized .bg-orange-50 {
+  background-color: rgba(220, 140, 40, 0.1) !important;
+}
+
+.admin-optimized .bg-blue-50 {
+  background-color: rgba(37, 99, 235, 0.1) !important;
+}
+
+.admin-optimized .bg-green-50 {
+  background-color: rgba(34, 139, 34, 0.1) !important;
+}
+
+.admin-optimized .bg-teal-50 {
+  background-color: rgba(20, 184, 166, 0.1) !important;
+}
+
+.admin-optimized .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+}
+
+.admin-optimized .bg-purple-50 {
+  background-color: rgba(168, 85, 247, 0.1) !important;
+}
+
+/* ========== 筛选标签优化 ========== */
+
+.admin-optimized .bg-purple-50 {
+  background-color: rgba(168, 85, 247, 0.1) !important;
+}
+
+.admin-optimized .text-purple-700 {
+  color: #9333ea !important;
+}
+
+.admin-optimized .border-purple-100 {
+  border-color: rgba(168, 85, 247, 0.2) !important;
+}
+
+.admin-optimized .hover\:text-purple-900:hover {
+  color: #6b21a8 !important;
+}
+
+.admin-optimized .bg-blue-50 {
+  background-color: rgba(37, 99, 235, 0.1) !important;
+}
+
+.admin-optimized .text-blue-700 {
+  color: #1d4ed8 !important;
+}
+
+.admin-optimized .border-blue-100 {
+  border-color: rgba(37, 99, 235, 0.2) !important;
+}
+
+.admin-optimized .hover\:text-blue-900:hover {
+  color: #1e3a8a !important;
+}
+
+.admin-optimized .bg-teal-50 {
+  background-color: rgba(20, 184, 166, 0.1) !important;
+}
+
+.admin-optimized .text-teal-700 {
+  color: #0f766e !important;
+}
+
+.admin-optimized .border-teal-100 {
+  border-color: rgba(20, 184, 166, 0.2) !important;
+}
+
+.admin-optimized .hover\:text-teal-900:hover {
+  color: #115e59 !important;
+}
+
+.admin-optimized .bg-green-50 {
+  background-color: rgba(34, 139, 34, 0.1) !important;
+}
+
+.admin-optimized .text-green-600 {
+  color: #16a34a !important;
+}
+
+.admin-optimized .border-green-100 {
+  border-color: rgba(34, 139, 34, 0.2) !important;
+}
+
+.admin-optimized .hover\:text-green-900:hover {
+  color: #14532d !important;
+}
+
+.admin-optimized .bg-orange-50 {
+  background-color: rgba(220, 140, 40, 0.1) !important;
+}
+
+.admin-optimized .text-orange-700 {
+  color: #c2410c !important;
+}
+
+.admin-optimized .border-orange-100 {
+  border-color: rgba(220, 140, 40, 0.2) !important;
+}
+
+.admin-optimized .hover\:text-orange-900:hover {
+  color: #9a3412 !important;
+}
+
+.admin-optimized .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+}
+
+.admin-optimized .text-amber-700 {
+  color: #b45309 !important;
+}
+
+.admin-optimized .border-amber-100 {
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+/* ========== 阴影优化 ========== */
+
+.admin-optimized .shadow-sm {
+  box-shadow: 0 1px 2px rgba(26, 26, 26, 0.05) !important;
+}
+
+.admin-optimized .shadow-sm\.shadow-blue-200 {
+  box-shadow: 0 1px 2px rgba(200, 48, 43, 0.1) !important;
+}
+
+.admin-optimized .shadow-sm\.shadow-red-200 {
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1) !important;
+}
+
+/* ========== 圆角微调 ========== */
+
+.admin-optimized .rounded-lg {
+  border-radius: 8px !important;
+}
+
+.admin-optimized .rounded-md {
+  border-radius: 6px !important;
+}
+
+/* ========== 过渡动画 ========== */
+
+.admin-optimized a,
+.admin-optimized button {
+  transition: all 0.2s ease;
+}
+
+.admin-optimized .transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-duration: 200ms;
+}
+
+/* ========== 滚动条样式 ========== */
+
+.admin-optimized ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.admin-optimized ::-webkit-scrollbar-track {
+  background: #faf8f5;
+}
+
+.admin-optimized ::-webkit-scrollbar-thumb {
+  background: #e0dedb;
+  border-radius: 4px;
+}
+
+.admin-optimized ::-webkit-scrollbar-thumb:hover {
+  background: #d0d0d0;
+}
+
+/* ========== 打印样式 ========== */
+
+@media print {
+  .admin-optimized {
+    background-color: #ffffff !important;
+  }
+
+  .admin-optimized header,
+  .admin-optimized .w-56 {
+    display: none !important;
+  }
+}
+
+/* ========== LawTable 列宽拖拽和固定列 ========== */
+
+.react-resizable {
+  position: relative;
+  background-clip: padding-box;
+}
+
+.react-resizable-handle {
+  position: absolute;
+  right: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background-color: transparent;
+  z-index: 20;
+  transition: background-color 0.2s;
+}
+
+.react-resizable-handle:hover {
+  background-color: #3b82f6;
+}
+
+.react-resizable-handle:active {
+  background-color: #2563eb;
+}
+
+.sticky-left-col {
+  border-right: 2px solid #e2e8f0;
+}
+
+.sticky-right-col {
+  border-left: 2px solid #e2e8f0;
+}

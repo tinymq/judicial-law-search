@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+:root {
+  --background: #faf8f5;
+  --foreground: #1a1a1a;
+
+  /* 优化后的配色方案 */
+  --color-bg-primary: #faf8f5;
+  --color-bg-secondary: #f5f3f0;
+  --color-bg-paper: #ffffff;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #6b6b6b;
+  --color-text-tertiary: #9b9b9b;
+  --color-accent: #c8302b;
+  --color-accent-hover: #a82723;
+  --color-border: #e8e6e3;
+
+  /* 字体 */
+  --font-display: 'Noto Serif SC', serif;
+  --font-body: 'Noto Sans SC', sans-serif;
+  --font-mono-custom: 'JetBrains Mono', monospace;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+  --font-mono: var(--font-mono-custom);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1a1a1a;
+    --foreground: #faf8f5;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+/* 管理后台特定样式 */
+.admin-page {
+  font-family: var(--font-body);
+}
+
+.admin-page h1,
+.admin-page h2,
+.admin-page h3 {
+  font-family: var(--font-display);
+}

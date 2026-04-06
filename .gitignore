@@ -1,0 +1,101 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+logs/
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+/app/generated/prisma
+
+# database
+*.db
+*.db-journal
+*.db.backup-*
+prisma/*.db
+
+# data files
+/laws/
+laws-exported/
+
+# generated mapping files
+title-to-lawid-mapping.json
+docs/title-to-lawid-mapping.json
+
+# temporary analysis scripts
+scripts/analyze-*.js
+scripts/check-*.js
+scripts/compare-*.js
+scripts/comprehensive-*.js
+scripts/convert-*.js
+scripts/execute-*.js
+scripts/fix-*.js
+scripts/generate-*.js
+scripts/reclassify-*.js
+scripts/remove-*.js
+scripts/rename-*.js
+scripts/reparse-*.js
+scripts/show-*.js
+scripts/test-*.js
+scripts/verify-*.js
+scripts/article-title-conversion-preview.md
+scripts/backup-database.js
+
+# backup files
+*.backup
+scripts/backups/*.json
+scripts/backups/*.db
+*.bak
+scripts/backups/*.backup
+
+# claude
+.claude/
+.stfolder/
+.stignore
+
+# cc-connect
+.cc-connect/
+
+# Database files (local only)
+*.db
+*.db-journal
+*.db.backup
+*-backup*.json
+dev.db.restored
+prisma/dev.db.restored
+

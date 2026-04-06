@@ -1,0 +1,341 @@
+/**
+ * 前端页面样式优化
+ *
+ * 与管理后台保持一致的设计风格：
+ * - 字体：Noto Serif SC + Noto Sans SC
+ * - 配色：米白背景 + 朱红色强调
+ * - 保持所有原有功能不变
+ */
+
+/* ========== 全局字体 ========== */
+
+.app-optimized {
+  font-family: var(--font-body, 'Noto Sans SC', sans-serif);
+}
+
+.app-optimized h1,
+.app-optimized h2,
+.app-optimized h3 {
+  font-family: var(--font-display, 'Noto Serif SC', serif);
+}
+
+/* ========== 背景色 ========== */
+
+.app-optimized {
+  background-color: #faf8f5 !important; /* 米白色 */
+}
+
+/* 顶部导航栏 */
+.app-optimized header {
+  background-color: #ffffff !important;
+  border-bottom-color: #c8302b !important; /* 朱红色 */
+  border-bottom-width: 2px !important;
+}
+
+/* 侧边栏 */
+.app-optimized .w-56 {
+  background-color: #f5f3f0 !important; /* 浅灰米色 */
+}
+
+/* 卡片/容器 */
+.app-optimized .bg-white {
+  background-color: #ffffff !important;
+}
+
+.app-optimized .bg-slate-50 {
+  background-color: #faf8f5 !important;
+}
+
+/* ========== 边框颜色 ========== */
+
+.app-optimized .border-slate-200 {
+  border-color: #e8e6e3 !important;
+}
+
+.app-optimized .border-slate-100 {
+  border-color: #f0ede9 !important;
+}
+
+/* ========== 文字颜色 ========== */
+
+.app-optimized .text-slate-900 {
+  color: #1a1a1a !important;
+}
+
+.app-optimized .text-slate-700 {
+  color: #6b6b6b !important;
+}
+
+.app-optimized .text-slate-600 {
+  color: #6b6b6b !important;
+}
+
+.app-optimized .text-slate-500 {
+  color: #6b6b6b !important;
+}
+
+.app-optimized .text-slate-400 {
+  color: #9b9b9b !important;
+}
+
+/* ========== 主色调：蓝色 → 朱红色 ========== */
+
+/* 主按钮 */
+.app-optimized .bg-blue-600 {
+  background-color: #c8302b !important;
+}
+
+.app-optimized .hover\:bg-blue-700:hover {
+  background-color: #a82723 !important;
+}
+
+.app-optimized .shadow-blue-200 {
+  box-shadow: 0 1px 2px rgba(200, 48, 43, 0.1) !important;
+}
+
+/* 链接颜色 */
+.app-optimized .hover\:text-blue-600:hover {
+  color: #c8302b !important;
+}
+
+.app-optimized .text-blue-600 {
+  color: #c8302b !important;
+}
+
+/* 链接默认颜色 */
+.app-optimized .text-blue-700 {
+  color: #c8302b !important;
+}
+
+.app-optimized .hover\:text-blue-800:hover {
+  color: #a82723 !important;
+}
+
+/* 焦点环 */
+.app-optimized .focus\:ring-blue-500:focus,
+.app-optimized .focus\:ring-1:focus {
+  --tw-ring-color: #c8302b !important;
+}
+
+.app-optimized .focus\:ring-2:focus {
+  --tw-ring-color: rgba(200, 48, 43, 0.5) !important;
+}
+
+/* ========== 搜索框优化 ========== */
+
+.app-optimized input[type="text"] {
+  background-color: #faf8f5 !important;
+  border-color: #e8e6e3 !important;
+}
+
+.app-optimized input[type="text"]:focus {
+  background-color: #ffffff !important;
+  border-color: #c8302b !important;
+  box-shadow: 0 0 0 3px rgba(200, 48, 43, 0.1) !important;
+}
+
+/* ========== 按钮/链接优化 ========== */
+
+.app-optimized a,
+.app-optimized button {
+  transition: all 0.2s ease;
+}
+
+.app-optimized a:hover {
+  transform: translateY(-1px);
+}
+
+/* ========== 标签/徽章优化 ========== */
+
+/* 效力位阶标签 - 红色（朱红） */
+.app-optimized .bg-red-50 {
+  background-color: rgba(200, 48, 43, 0.1) !important;
+}
+
+.app-optimized .text-red-600 {
+  color: #c8302b !important;
+}
+
+.app-optimized .border-red-100 {
+  border-color: rgba(200, 48, 43, 0.2) !important;
+}
+
+/* 其他标签优化 */
+.app-optimized .bg-orange-50 {
+  background-color: rgba(220, 140, 40, 0.1) !important;
+}
+
+.app-optimized .text-orange-600 {
+  color: #c2410c !important;
+}
+
+.app-optimized .border-orange-100 {
+  border-color: rgba(220, 140, 40, 0.2) !important;
+}
+
+.app-optimized .hover\:text-orange-900:hover {
+  color: #9a3412 !important;
+}
+
+.app-optimized .bg-blue-50 {
+  background-color: rgba(37, 99, 235, 0.1) !important;
+}
+
+.app-optimized .text-blue-700 {
+  color: #1d4ed8 !important;
+}
+
+.app-optimized .border-blue-100 {
+  border-color: rgba(37, 99, 235, 0.2) !important;
+}
+
+.app-optimized .hover\:text-blue-900:hover {
+  color: #1e3a8a !important;
+}
+
+.app-optimized .bg-green-50 {
+  background-color: rgba(34, 139, 34, 0.1) !important;
+}
+
+.app-optimized .text-green-600 {
+  color: #16a34a !important;
+}
+
+.app-optimized .border-green-100 {
+  border-color: rgba(34, 139, 34, 0.2) !important;
+}
+
+.app-optimized .hover\:text-green-900:hover {
+  color: #14532d !important;
+}
+
+.app-optimized .bg-teal-50 {
+  background-color: rgba(20, 184, 166, 0.1) !important;
+}
+
+.app-optimized .text-teal-700 {
+  color: #0f766e !important;
+}
+
+.app-optimized .border-teal-100 {
+  border-color: rgba(20, 184, 166, 0.2) !important;
+}
+
+.app-optimized .hover\:text-teal-900:hover {
+  color: #115e59 !important;
+}
+
+.app-optimized .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+}
+
+.app-optimized .text-amber-700 {
+  color: #b45309 !important;
+}
+
+.app-optimized .border-amber-100 {
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+/* ========== 筛选标签优化 ========== */
+
+/* 紫色标签 */
+.app-optimized .bg-purple-50 {
+  background-color: rgba(168, 85, 247, 0.1) !important;
+}
+
+.app-optimized .text-purple-700 {
+  color: #9333ea !important;
+}
+
+.app-optimized .border-purple-100 {
+  border-color: rgba(168, 85, 247, 0.2) !important;
+}
+
+.app-optimized .hover\:text-purple-900:hover {
+  color: #6b21a8 !important;
+}
+
+/* 绿色标签 */
+.app-optimized .bg-green-50 {
+  background-color: rgba(34, 139, 34, 0.1) !important;
+}
+
+.app-optimized .text-green-600 {
+  color: #16a34a !important;
+}
+
+/* ========== 阴影优化 ========== */
+
+.app-optimized .shadow-sm {
+  box-shadow: 0 1px 2px rgba(26, 26, 26, 0.05) !important;
+}
+
+/* ========== 圆角微调 ========== */
+
+.app-optimized .rounded-lg {
+  border-radius: 8px !important;
+}
+
+/* ========== 卡片悬停效果 ========== */
+
+.app-optimized .group:hover {
+  transition: all 0.15s ease;
+}
+
+.app-optimized .hover\:bg-slate-50:hover {
+  background-color: rgba(200, 48, 43, 0.03) !important;
+}
+
+/* ========== 滚动条样式 ========== */
+
+.app-optimized ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.app-optimized ::-webkit-scrollbar-track {
+  background: #faf8f5;
+}
+
+.app-optimized ::-webkit-scrollbar-thumb {
+  background: #e0dedb;
+  border-radius: 4px;
+}
+
+.app-optimized ::-webkit-scrollbar-thumb:hover {
+  background: #d0d0d0;
+}
+
+/* ========== 特殊页面元素 ========== */
+
+/* 首页 - 违法行为查询入口卡片 */
+.app-optimized .bg-blue-50 {
+  background-color: rgba(200, 48, 43, 0.1) !important;
+}
+
+.app-optimized .border-blue-200 {
+  border-color: rgba(200, 48, 43, 0.2) !important;
+}
+
+.app-optimized .text-blue-700 {
+  color: #c8302b !important;
+}
+
+.app-optimized .hover\:bg-blue-100:hover {
+  background-color: rgba(200, 48, 43, 0.15) !important;
+}
+
+/* 违法行为查询页 - 状态标签 */
+.app-optimized .bg-blue-50 {
+  background-color: rgba(37, 99, 235, 0.1) !important;
+}
+
+.app-optimized .text-blue-600 {
+  color: #c8302b !important;
+}
+
+/* 后台管理链接 */
+.app-optimized .hover\:text-blue-600:hover {
+  color: #c8302b !important;
+}
