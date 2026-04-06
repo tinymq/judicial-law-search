@@ -8,7 +8,7 @@ import type { Metadata } from 'next';
 import { ADMIN_CONFIG } from './admin/admin-config';
 import { buildLawBaseTitle, normalizeLawTitle } from '@/src/lib/law-grouping';
 import { resolveStatus, statusColor } from '@/src/lib/category-config';
-import { PROVINCES, CITY_TO_PROVINCE, COUNTY_TO_PROVINCE } from '@/src/lib/region-config';
+import { PROVINCES, CITY_TO_PROVINCE, COUNTY_TO_PROVINCE, getAllowedRegionValues } from '@/src/lib/region-config';
 import RecentViews from '@/src/components/RecentViews';
 import MobileFilterPanel from '@/components/MobileFilterPanel';
 import './app-styles.css';
@@ -175,10 +175,20 @@ export default async function Home({
   const isOptimized = ADMIN_CONFIG.isOptimized(theme);
   const themeClass = isOptimized ? 'app-optimized' : '';
 
+  // 省份白名单过滤：只展示全国 + 白名单省份的法规
+  const allowedRegions = getAllowedRegionValues();
+  const regionFilter = {
+    OR: [
+      { region: { in: allowedRegions } },
+      { region: null },
+    ],
+  };
+
   // 1. 获取效力位阶统计（按法定效力位阶顺序排序）
   const levels = await prisma.law.groupBy({
     by: ['level'],
     _count: { id: true },
+    where: regionFilter,
   });
 
   // 按法定效力位阶的优先级顺序排序
@@ -190,7 +200,8 @@ export default async function Home({
     by: ['status'],
     _count: { id: true },
     where: {
-      status: { not: null }
+      status: { not: null },
+      ...regionFilter,
     },
   });
   const statuses = rawStatuses as Array<{ status: string; _count: { id: number } }>;
@@ -207,6 +218,7 @@ export default async function Home({
     by: ['category'],
     _count: { id: true },
     orderBy: { category: 'asc' },
+    where: regionFilter,
   });
   categories.sort((a, b) => b._count.id - a._count.id);
 
@@ -214,7 +226,7 @@ export default async function Home({
   const rawRegions = await prisma.law.groupBy({
     by: ['region'],
     _count: { id: true },
-    where: { region: { not: null } },
+    where: { region: { not: null, in: allowedRegions } },
   });
   const typedRegions = rawRegions as Array<{ region: string; _count: { id: number } }>;
 
@@ -303,42 +315,55 @@ export default async function Home({
   // 2.6 获取行业统计
   const industryStats = await prisma.industry.findMany({
     where: {
-      laws: { some: {} }, // 只显示有法规的行业
+      laws: {
+        some: {
+          OR: [
+            { region: { in: allowedRegions } },
+            { region: null },
+          ],
+        },
+      },
     },
     select: {
       id: true,
       name: true,
-      _count: { select: { laws: true } },
+      _count: { select: { laws: { where: regionFilter } } },
     },
     orderBy: { order: 'asc' },
   });
-  const industries = industryStats.map(ind => ({
-    id: ind.id,
-    name: ind.name,
-    _count: ind._count.laws,
-  }));
+  const industries = industryStats
+    .map(ind => ({
+      id: ind.id,
+      name: ind.name,
+      _count: ind._count.laws,
+    }))
+    .filter(ind => ind._count > 0);
 
   // 3. 获取年份统计（使用原生 SQL 避免加载所有日期）
-  const yearRows = await prisma.$queryRaw<Array<{ year: string; cnt: bigint }>>`
-    SELECT strftime('%Y', promulgationDate / 1000, 'unixepoch') as year, COUNT(*) as cnt
-    FROM Law
-    WHERE promulgationDate IS NOT NULL
-    GROUP BY year
-    ORDER BY year DESC
-  `;
+  // 年份统计需要同样的省份过滤
+  const regionPlaceholders = allowedRegions.map(() => '?').join(',');
+  const yearRows = await prisma.$queryRawUnsafe<Array<{ year: string; cnt: bigint }>>(
+    `SELECT strftime('%Y', promulgationDate / 1000, 'unixepoch') as year, COUNT(*) as cnt
+     FROM Law
+     WHERE promulgationDate IS NOT NULL AND (region IN (${regionPlaceholders}) OR region IS NULL)
+     GROUP BY year
+     ORDER BY year DESC`,
+    ...allowedRegions,
+  );
   const years = yearRows.map(r => ({ year: r.year, count: Number(r.cnt) }));
 
-  // 4. 构建过滤条件
-  const where: any = {};
+  // 4. 构建过滤条件（始终包含省份白名单）
+  const where: any = { ...regionFilter };
 
   if (selectedCategory) where.category = selectedCategory;
   if (selectedIndustry) where.industryId = parseInt(selectedIndustry);
   if (selectedLevel) where.level = selectedLevel;
   if (selectedStatus) where.status = selectedStatus;
 
-  // 区域过滤：精确匹配
+  // 区域过滤：精确匹配（在白名单基础上进一步筛选）
   if (selectedRegion) {
     where.region = selectedRegion;
+    delete where.OR; // 精确选区域时不再需要 OR 条件
   }
 
   if (selectedYear) {
@@ -456,7 +481,7 @@ export default async function Home({
   };
 
   return (
-    <div className={`min-h-screen bg-slate-50 font-sans text-slate-900 ${themeClass}`}>
+    <div className={`min-h-screen bg-slate-50 font-sans text-slate-900${themeClass ? ' ' + themeClass : ''}`}>
       {/* 顶部导航栏 */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">

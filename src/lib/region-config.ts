@@ -313,3 +313,33 @@ export function getProvincesForDisplay(): Array<{ code: string; shortName: strin
     ...PROVINCES.map(p => ({ code: p.code, shortName: p.shortName })),
   ];
 }
+
+// === 前台展示的省份白名单 ===
+// 只展示这些省份（及其下属城市/自治县）的法规，全国性法规始终展示
+export const ALLOWED_PROVINCES = ['湖南', '海南', '山东', '江苏'];
+
+/**
+ * 获取白名单内所有合法的 region 值（省份 + 城市 + 自治县）
+ */
+export function getAllowedRegionValues(): string[] {
+  const allowed = new Set<string>();
+  allowed.add('全国');
+
+  const allowedCodes = new Set<string>();
+  for (const prov of PROVINCES) {
+    if (ALLOWED_PROVINCES.includes(prov.shortName)) {
+      allowed.add(prov.shortName);
+      allowedCodes.add(prov.code);
+    }
+  }
+
+  for (const [city, code] of Object.entries(CITY_TO_PROVINCE)) {
+    if (allowedCodes.has(code)) allowed.add(city);
+  }
+
+  for (const [county, code] of Object.entries(COUNTY_TO_PROVINCE)) {
+    if (allowedCodes.has(code)) allowed.add(county);
+  }
+
+  return Array.from(allowed);
+}
