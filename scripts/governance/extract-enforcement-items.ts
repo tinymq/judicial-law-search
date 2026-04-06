@@ -34,6 +34,12 @@ import {
   type ExtractionResult,
 } from '../../src/lib/ai-provider';
 import { getAllowedRegionValues, ALLOWED_PROVINCES } from '../../src/lib/region-config';
+import {
+  generateCode,
+  findIndustryCode,
+  LEVEL_CODES,
+  CodeSequencer,
+} from '../../src/lib/enforcement-encoding';
 
 const prisma = new PrismaClient();
 
@@ -159,17 +165,18 @@ async function main() {
   let candidates = laws.filter(law => law._count.articles > 0);
   console.log(`有条文的法规: ${candidates.length} 部`);
 
-  // 跳过已有提取结果的法规
+  // 跳过已有提取结果的法规（通过 lawId 关联判断）
   if (SKIP_EXISTING) {
-    const existingLawTitles = await prisma.enforcementItem.findMany({
-      select: { legalBasisText: true },
-      distinct: ['legalBasisText'],
+    const existingLawIds = await prisma.enforcementItem.findMany({
+      where: { lawId: { not: null } },
+      select: { lawId: true },
+      distinct: ['lawId'],
     });
-    // 由于 EnforcementItem 没有直接关联 Law，通过检查是否已有同名法规的提取结果来判断
-    // 更好的方式是记录已处理的 lawId，这里先用简单逻辑
-    const existingCount = await prisma.enforcementItem.count();
-    if (existingCount > 0) {
-      console.log(`数据库中已有 ${existingCount} 条执法事项记录`);
+    const processedLawIds = new Set(existingLawIds.map(e => e.lawId));
+    if (processedLawIds.size > 0) {
+      const before = candidates.length;
+      candidates = candidates.filter(law => !processedLawIds.has(law.id));
+      console.log(`已提取过的法规: ${before - candidates.length} 部（跳过）`);
     }
   }
 
@@ -185,6 +192,11 @@ async function main() {
   if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   }
+
+  // 初始化编码序号管理器
+  const existingItemCount = await prisma.enforcementItem.count();
+  const sequencer = new CodeSequencer(existingItemCount);
+  let globalSeq = existingItemCount;
 
   // 分批处理
   const allResults: ExtractionResult[] = [];
@@ -221,23 +233,37 @@ async function main() {
           // 入库
           if (!DRY_RUN) {
             const provinceCode = getProvinceCode(law.region);
-            const existingCount = await prisma.enforcementItem.count();
-            let seq = existingCount;
 
             for (const item of result.items) {
-              seq++;
+              globalSeq++;
+
+              // 生成 18 位编码
+              const domainCode = findIndustryCode(item.enforcementDomain || '') || '00';
+              const levelCode = LEVEL_CODES[item.enforcementLevel || '各级'] || 'GJ';
+              const orgName = item.enforcementBody || '未知';
+              const orgSeq = sequencer.getOrgSequence(provinceCode, domainCode, levelCode, orgName);
+              const itemSeq = sequencer.nextItemSequence();
+              const code = generateCode(provinceCode, domainCode, levelCode, orgSeq, itemSeq, item.category);
+
               await prisma.enforcementItem.create({
                 data: {
-                  sequenceNumber: seq,
+                  sequenceNumber: globalSeq,
                   name: item.name,
                   category: item.category || '行政检查',
                   enforcementBody: item.enforcementBody,
                   legalBasisText: item.legalBasisText,
-                  remarks: item.remarks
-                    ? `${item.remarks} | 来源法规: ${law.title}`
-                    : `来源法规: ${law.title}`,
+                  remarks: item.remarks || null,
                   province: provinceCode,
-                  industryId: null, // 后续可通过法规的行业关联回填
+                  industryId: null,
+                  // 新增字段
+                  code,
+                  enforcementLevel: item.enforcementLevel,
+                  checkTarget: item.checkTarget,
+                  checkContent: item.checkContent,
+                  checkMethod: item.checkMethod,
+                  enforcementDomain: item.enforcementDomain,
+                  itemStatus: '生效',
+                  lawId: law.id,
                 },
               });
             }
@@ -307,14 +333,24 @@ async function main() {
   // 保存提取结果 CSV
   if (totalItems > 0) {
     const csvPath = path.join(OUTPUT_DIR, `extracted-items-${new Date().toISOString().slice(0, 10)}.csv`);
-    let csv = '法规ID,法规标题,事项名称,执法类别,执法主体,相关条款,执法依据\n';
+    let csv = '法规ID,法规标题,事项名称,执法类别,执法领域,执法主体,行使层级,检查对象,检查内容,检查方式,相关条款,执法依据\n';
     for (const result of allResults) {
       for (const item of result.items) {
-        const title = (result.lawTitle || '').replace(/"/g, '""');
-        const name = (item.name || '').replace(/"/g, '""');
-        const basis = (item.legalBasisText || '').replace(/"/g, '""').replace(/\n/g, ' ');
-        const articles = (item.relatedArticles || []).join(', ');
-        csv += `${result.lawId},"${title}","${name}",${item.category},${item.enforcementBody || ''},"${articles}","${basis}"\n`;
+        const esc = (s: string | undefined) => `"${(s || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+        csv += [
+          result.lawId,
+          esc(result.lawTitle),
+          esc(item.name),
+          item.category || '行政检查',
+          item.enforcementDomain || '',
+          item.enforcementBody || '',
+          item.enforcementLevel || '',
+          item.checkTarget || '',
+          item.checkContent || '',
+          item.checkMethod || '',
+          `"${(item.relatedArticles || []).join(', ')}"`,
+          esc(item.legalBasisText),
+        ].join(',') + '\n';
       }
     }
     fs.writeFileSync(csvPath, '\uFEFF' + csv);

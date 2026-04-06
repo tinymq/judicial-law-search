@@ -20,8 +20,18 @@ export interface ExtractedEnforcementItem {
   name: string;
   /** 执法类别 — 行政检查 / 行政处罚 / 行政许可 / 行政强制 */
   category: string;
-  /** 执法主体（实施层级）— 如"省级""市级""县级" */
+  /** 执法主体 — 机构名称，如"省市场监督管理局" */
   enforcementBody?: string;
+  /** 行使层级 — 省级/市级/县级/乡级/各级 */
+  enforcementLevel?: string;
+  /** 检查对象 — 如"食品生产企业" */
+  checkTarget?: string;
+  /** 检查内容 — 如"生产经营活动" */
+  checkContent?: string;
+  /** 检查方式 — 如"现场检查""书面检查""网络监测" */
+  checkMethod?: string;
+  /** 执法领域 — 如"市场监督管理""生态环境""交通运输" */
+  enforcementDomain?: string;
   /** 执法依据原文 — 法规中的具体条款引用 */
   legalBasisText?: string;
   /** 相关条款号 — 如 ["第十条", "第十一条"] */
@@ -82,16 +92,47 @@ export function getSystemPrompt(): string {
   return `你是一位专业的法律文本分析专家，擅长从法规条文中提取行政检查事项。
 
 ## 任务
-从给定的法规条文中，识别并提取所有的**行政检查事项**。
+从给定的法规条文中，识别并提取所有的**行政检查事项**，输出结构化数据。
 
 ## 提取规则
-1. **事项名称**：格式为"检查对象+检查内容+行政检查"
-   - 示例："危险化学品经营企业安全生产条件行政检查"
-   - 示例："食品生产经营者食品安全状况行政检查"
-2. **执法类别**：固定为"行政检查"
-3. **执法主体**：根据法规内容判断实施层级（省级/市级/县级/各级）
-4. **执法依据**：引用具体条款原文
-5. **相关条款**：列出涉及的条款号
+
+### 1. 事项名称（name）
+格式为"对+检查对象+检查内容+的行政检查"
+- 示例："对危险化学品经营企业安全生产条件的行政检查"
+- 示例："对食品生产经营者食品安全状况的行政检查"
+
+### 2. 检查对象（checkTarget）
+被检查的主体，从事项中拆分出来
+- 示例："危险化学品经营企业"、"食品生产经营者"
+
+### 3. 检查内容（checkContent）
+检查的具体内容/事项
+- 示例："安全生产条件"、"食品安全状况"
+
+### 4. 检查方式（checkMethod）
+根据法规描述判断检查方式，常见类型：
+- "现场检查"：进入场所、查看设施设备
+- "书面检查"：查阅资料、审查报告
+- "网络监测"：在线监测、数据核查
+- 如法规未明确，填"现场检查"（默认）
+
+### 5. 执法主体（enforcementBody）
+具体执法机构名称（不是层级）
+- 示例："市场监督管理部门"、"生态环境主管部门"、"交通运输主管部门"
+
+### 6. 行使层级（enforcementLevel）
+根据法规内容判断，必须为以下之一：
+- "省级"、"市级"、"县级"、"乡级"、"各级"
+
+### 7. 执法领域（enforcementDomain）
+事项所属的执法领域，必须为以下之一：
+人民政府、发展和改革、教育、科学技术、工业和信息化、公安、民政、司法、财政、人力资源和社会保障、自然资源、生态环境、住房和城乡建设、交通运输、水利、农业农村、商务、文化和旅游、卫生健康、应急管理、市场监督管理、林业和草原、城市管理
+
+### 8. 执法依据（legalBasisText）
+引用法规中的具体条款原文，控制在200字以内。
+
+### 9. 相关条款（relatedArticles）
+列出涉及的条款号。
 
 ## 识别信号
 以下关键词/句式通常表示行政检查事项：
@@ -101,16 +142,20 @@ export function getSystemPrompt(): string {
 - "进入...检查"、"查阅...资料"、"询问..."
 
 ## 输出格式
-请以 JSON 数组格式输出，每个元素包含：
+请以 JSON 数组格式输出：
 \`\`\`json
 [
   {
-    "name": "检查对象+检查内容+行政检查",
+    "name": "对XX的XX行政检查",
     "category": "行政检查",
-    "enforcementBody": "实施层级",
-    "legalBasisText": "法规中的依据原文",
-    "relatedArticles": ["第X条"],
-    "remarks": "补充说明（可选）"
+    "checkTarget": "检查对象",
+    "checkContent": "检查内容",
+    "checkMethod": "现场检查",
+    "enforcementBody": "执法机构名称",
+    "enforcementLevel": "各级",
+    "enforcementDomain": "执法领域",
+    "legalBasisText": "依据原文",
+    "relatedArticles": ["第X条"]
   }
 ]
 \`\`\`
@@ -119,6 +164,7 @@ export function getSystemPrompt(): string {
 - 只提取**行政检查**类事项，不要提取行政处罚、行政许可等
 - 如果法规中没有行政检查事项，返回空数组 \`[]\`
 - 名称要具体、完整，能准确描述检查事项的对象和内容
+- 同一部法规可能有多个不同的检查事项，逐一列出
 - 执法依据尽量引用原文，但不要过长（控制在200字以内）`;
 }
 
@@ -165,9 +211,14 @@ export class MockAIProvider implements AIProvider {
       const hasCheck = checkKeywords.some(kw => content.includes(kw));
       if (hasCheck && content.includes('检查')) {
         items.push({
-          name: `[Mock] ${law.title}相关行政检查`,
+          name: `[Mock] 对相关主体${law.title.slice(0, 8)}的行政检查`,
           category: '行政检查',
-          enforcementBody: '各级',
+          enforcementBody: '监督管理部门',
+          enforcementLevel: '各级',
+          checkTarget: `[Mock] 相关主体`,
+          checkContent: `[Mock] ${law.title.slice(0, 8)}相关事项`,
+          checkMethod: '现场检查',
+          enforcementDomain: law.issuingAuthority?.includes('市场') ? '市场监督管理' : '人民政府',
           legalBasisText: content.slice(0, 200),
           relatedArticles: [article.title],
           remarks: 'Mock提取结果，仅用于流程测试',
@@ -285,6 +336,11 @@ export function parseAIResponse(raw: string): ExtractedEnforcementItem[] {
         name: String(item.name || ''),
         category: String(item.category || '行政检查'),
         enforcementBody: item.enforcementBody ? String(item.enforcementBody) : undefined,
+        enforcementLevel: item.enforcementLevel ? String(item.enforcementLevel) : undefined,
+        checkTarget: item.checkTarget ? String(item.checkTarget) : undefined,
+        checkContent: item.checkContent ? String(item.checkContent) : undefined,
+        checkMethod: item.checkMethod ? String(item.checkMethod) : undefined,
+        enforcementDomain: item.enforcementDomain ? String(item.enforcementDomain) : undefined,
         legalBasisText: item.legalBasisText ? String(item.legalBasisText) : undefined,
         relatedArticles: Array.isArray(item.relatedArticles) ? item.relatedArticles.map(String) : undefined,
         remarks: item.remarks ? String(item.remarks) : undefined,

@@ -4,6 +4,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import SiteHeader from '@/components/SiteHeader';
 
+// 省份元数据
+const PROVINCE_META: Record<string, { fullName: string; org: string; cityCount: number; code: string; exampleCity: string }> = {
+  '江苏': { fullName: '江苏省', org: '江苏省司法厅', cityCount: 13, code: '32', exampleCity: '南京' },
+  '湖南': { fullName: '湖南省', org: '湖南省司法厅', cityCount: 14, code: '43', exampleCity: '长沙' },
+  '海南': { fullName: '海南省', org: '海南省司法厅', cityCount: 4, code: '46', exampleCity: '海口' },
+  '山东': { fullName: '山东省', org: '山东省司法厅', cityCount: 16, code: '37', exampleCity: '济南' },
+};
+const PROVINCE_NAMES = Object.keys(PROVINCE_META);
+
 const C = {
   primary: '#1a365d', secondary: '#2b6cb0', accent: '#3182ce',
   light: '#ebf8ff', lightBorder: '#bee3f8',
@@ -48,9 +57,10 @@ function FlowStep({ num, title, desc, color, bg }: { num: string; title: string;
   );
 }
 
-function Overview() {
+function Overview({ province }: { province: string }) {
+  const meta = PROVINCE_META[province];
   const stats = [
-    { l: '覆盖领域', v: '数十个执法领域' }, { l: '覆盖城市', v: '13个设区市' },
+    { l: '覆盖领域', v: '数十个执法领域' }, { l: '覆盖城市', v: `${meta.cityCount}个设区市` },
     { l: '事项规模', v: '数千项' }, { l: '覆盖率', v: '80%' },
   ];
   const steps = [
@@ -65,7 +75,7 @@ function Overview() {
       <div style={{ background: 'linear-gradient(135deg,#1a365d,#2b6cb0)', borderRadius: 16, padding: 24, color: '#fff', marginBottom: 20 }}>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>行政检查事项AI智能梳理服务</div>
         <div style={{ fontSize: 14, opacity: 0.9, lineHeight: 1.8 }}>
-          以江苏省司法厅为服务对象，利用AI技术对全省数千部法律法规进行解析，自动识别并梳理行政检查事项，输出覆盖全省80%检查场景的标准化事项清单基础版。
+          以{meta.org}为服务对象，利用AI技术对全省数千部法律法规进行解析，自动识别并梳理行政检查事项，输出覆盖全省80%检查场景的标准化事项清单基础版。
         </div>
         <div style={{ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
           {stats.map((s, i) => (
@@ -153,7 +163,7 @@ function ProcessDetail() {
   );
 }
 
-function DirectoryTree() {
+function DirectoryTree({ province }: { province: string }) {
   const [exp, setExp] = useState<Record<string, boolean>>({ l1: true, l2_1: true, l3_1: true });
   const tog = (k: string) => setExp(prev => ({ ...prev, [k]: !prev[k] }));
 
@@ -162,8 +172,9 @@ function DirectoryTree() {
     borderRadius: 8, padding: '10px 14px', marginLeft: lv * 24, marginBottom: 6, cursor: 'pointer',
   });
 
+  const meta = PROVINCE_META[province];
   const doms = ['市场监管', '生态环境', '交通运输', '农业农村', '文化旅游', '应急管理'];
-  const orgs = ['省市场监督管理局（省级）', '南京市市场监管局（市级）', '各区市场监管局（县级）'];
+  const orgs = [`省市场监督管理局（省级）`, `${meta.exampleCity}市市场监管局（市级）`, `各区市场监管局（县级）`];
   const its = ['对食品生产企业生产经营活动的行政检查', '对特种设备使用单位安全管理的行政检查', '对药品经营企业经营活动的行政检查'];
   const lvs = [
     { lv: '一级', nm: '事项类型', ds: '固定为"行政检查"', co: C.primary, bg: '#dbeafe' },
@@ -236,9 +247,10 @@ function DirectoryTree() {
   );
 }
 
-function EncodingRules() {
+function EncodingRules({ province }: { province: string }) {
+  const meta = PROVINCE_META[province];
   const segs = [
-    { label: '省级标识', width: '15%', co: C.primary, bg: C.light, ex: '32', ds: '江苏省代码' },
+    { label: '省级标识', width: '15%', co: C.primary, bg: C.light, ex: meta.code, ds: `${meta.fullName}代码` },
     { label: '领域代码', width: '20%', co: C.green, bg: C.greenLight, ex: 'SC', ds: '市场监管' },
     { label: '主体层级', width: '20%', co: C.orange, bg: C.orangeLight, ex: 'SJ01', ds: '省级第1主体' },
     { label: '事项序列码', width: '45%', co: C.purple, bg: C.purpleLight, ex: 'XZJC00001234', ds: '行政检查流水号' },
@@ -257,7 +269,7 @@ function EncodingRules() {
               </div>
             ))}
           </div>
-          <div style={{ textAlign: 'center', marginTop: 8, fontSize: 13, color: C.accent, fontWeight: 600, fontFamily: 'monospace', letterSpacing: 1 }}>32-SC-SJ01-XZJC00001234</div>
+          <div style={{ textAlign: 'center', marginTop: 8, fontSize: 13, color: C.accent, fontWeight: 600, fontFamily: 'monospace', letterSpacing: 1 }}>{meta.code}-SC-SJ01-XZJC00001234</div>
           <div style={{ textAlign: 'center', fontSize: 11, color: C.gray }}>示意编码（非真实格式，仅用于理解结构）</div>
         </div>
       </Card>
@@ -284,14 +296,15 @@ function EncodingRules() {
   );
 }
 
-function KeyPoints() {
+function KeyPoints({ province }: { province: string }) {
+  const meta = PROVINCE_META[province];
   return (
     <div>
       <div style={{ fontSize: 15, fontWeight: 700, color: C.primary, marginBottom: 16 }}>核心要点速记</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <Card title="服务定位" bc={C.lightBorder}>
           <div style={{ fontSize: 13, color: C.gray, lineHeight: 1.8 }}>
-            以<strong>江苏省司法厅</strong>为服务对象，输出全省行政检查事项清单<strong>基础版</strong>，覆盖<strong>80%</strong>检查场景。以外省成熟事项为借鉴和对标。
+            以<strong>{meta.org}</strong>为服务对象，输出全省行政检查事项清单<strong>基础版</strong>，覆盖<strong>80%</strong>检查场景。以外省成熟事项为借鉴和对标。
           </div>
         </Card>
         <Card title="AI技术应用" bc={C.greenBorder}>
@@ -304,7 +317,7 @@ function KeyPoints() {
         </Card>
         <Card title="工作量构成" bc={C.orangeBorder}>
           <div style={{ fontSize: 13, color: C.gray, lineHeight: 1.8 }}>
-            1. <strong>资料归集</strong>：数十个部门 + 13个设区市<br />
+            1. <strong>资料归集</strong>：数十个部门 + {meta.cityCount}个设区市<br />
             2. <strong>AI梳理</strong>：数十个执法领域，数千项事项<br />
             3. <strong>标准化+校验</strong>：多轮校验优化
           </div>
@@ -320,7 +333,7 @@ function KeyPoints() {
       <div style={{ marginTop: 16 }}>
         <Card title="实施要点与注意事项" bc={C.lightBorder}>
           <div style={{ fontSize: 13, color: C.gray, lineHeight: 2 }}>
-            <strong style={{ color: C.accent }}>服务定位：</strong>本方案以江苏省司法厅为服务对象，输出覆盖全省80%检查场景的标准化事项清单基础版，并可根据客户需求进行定制化扩展。<br />
+            <strong style={{ color: C.accent }}>服务定位：</strong>本方案以{meta.org}为服务对象，输出覆盖全省80%检查场景的标准化事项清单基础版，并可根据客户需求进行定制化扩展。<br />
             <strong style={{ color: C.green }}>质量保障：</strong>全流程采用"AI智能梳理 + 专业团队复核"的双层审校机制，确保事项内容合法、规范、合理，最终交付可直接导入执法系统的标准化数据文件。<br />
             <strong style={{ color: C.orange }}>动态维护：</strong>基础版交付后提供持续更新机制，针对法规修改、机构调整、新增领域等变化场景，实现事项清单的长期有效性。
           </div>
@@ -332,7 +345,14 @@ function KeyPoints() {
 
 export default function PlanPage() {
   const [activeTab, setActiveTab] = useState(0);
-  const content = [<Overview key={0} />, <ProcessDetail key={1} />, <DirectoryTree key={2} />, <EncodingRules key={3} />, <KeyPoints key={4} />];
+  const [province, setProvince] = useState(PROVINCE_NAMES[0]);
+  const content = [
+    <Overview key={0} province={province} />,
+    <ProcessDetail key={1} />,
+    <DirectoryTree key={2} province={province} />,
+    <EncodingRules key={3} province={province} />,
+    <KeyPoints key={4} province={province} />,
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
@@ -348,6 +368,24 @@ export default function PlanPage() {
       </header>
 
       <section className="max-w-[920px] mx-auto px-4 py-6">
+        {/* 省份选择 */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.gray, marginRight: 4 }}>服务省份：</span>
+          {PROVINCE_NAMES.map(p => (
+            <button
+              key={p}
+              onClick={() => setProvince(p)}
+              style={{
+                padding: '5px 14px', borderRadius: 6, fontWeight: 600, fontSize: 12,
+                border: province === p ? `2px solid ${C.primary}` : '2px solid #e2e8f0',
+                background: province === p ? C.primary : '#fff',
+                color: province === p ? '#fff' : C.gray,
+              }}
+            >
+              {PROVINCE_META[p].fullName}
+            </button>
+          ))}
+        </div>
         <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
           {tabNames.map((tab, i) => (
             <button

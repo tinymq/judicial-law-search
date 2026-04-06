@@ -65,6 +65,7 @@ model Law {
   articles                  Article[]
   industry                  Industry?   @relation(fields: [industryId], references: [id])
   lawIndustries             LawIndustry[]
+  enforcementItems          EnforcementItem[]
 
   @@index([title])
   @@index([category])
@@ -74,17 +75,17 @@ model Law {
   @@index([industryId])
 }
 
-/// 执法事项表 - 各省执法事项目录
+/// 执法事项表 - 各省执法事项目录（含行政检查事项扩展字段）
 model EnforcementItem {
   /// 主键ID - 自增主键
   id                 Int       @id @default(autoincrement())
   /// 序号
   sequenceNumber     Int
-  /// 执法事项名称
+  /// 执法事项名称 - 行政检查格式：检查对象+检查内容+行政检查
   name               String
   /// 执法类别 - 行政许可/行政强制/行政处罚/行政检查 等
   category           String
-  /// 执法主体（实施层级）
+  /// 执法主体 - 机构名称，如"省市场监督管理局"
   enforcementBody    String?
   /// 承办机构
   handlingDepartment String?
@@ -103,10 +104,35 @@ model EnforcementItem {
   /// 更新时间
   updatedAt          DateTime  @updatedAt
 
+  // === 检查事项扩展字段 ===
+  /// 18位唯一编码 - 省(2)+领域(2)+主体层级(4)+序列(10)
+  code               String?   @unique
+  /// 行使层级 - 省级/市级/县级/乡级
+  enforcementLevel   String?
+  /// 检查对象 - 如"食品生产企业"
+  checkTarget        String?
+  /// 检查内容 - 如"生产经营活动"
+  checkContent       String?
+  /// 检查方式 - 如"现场检查""书面检查""网络监测"
+  checkMethod        String?
+  /// 执法领域 - 二级分类，如"市场监管""生态环境"
+  enforcementDomain  String?
+  /// 事项状态 - 生效/暂停
+  itemStatus         String?   @default("生效")
+  /// 来源法规ID - 关联Law表
+  lawId              Int?
+  /// 关联法规
+  law                Law?      @relation(fields: [lawId], references: [id])
+
   @@index([category])
   @@index([province])
   @@index([industryId])
   @@index([name])
+  @@index([code])
+  @@index([enforcementLevel])
+  @@index([enforcementDomain])
+  @@index([itemStatus])
+  @@index([lawId])
 }
 
 /// 条表 - 存储法规的"条"，是法规的基本层级
