@@ -13,7 +13,7 @@ export default function SiteHeader() {
           className="object-contain"
         />
       </div>
-      <span className="text-sm sm:text-lg font-bold tracking-tight whitespace-nowrap">可为法规随手查</span>
+      <span className="text-sm sm:text-lg font-bold tracking-tight whitespace-nowrap">执法监督法规查</span>
     </Link>
   );
 }

@@ -11,7 +11,6 @@ import {
   STATUS_OPTIONS,
   REGION_OPTIONS
 } from '@/src/lib/category-config';
-import StatusBadge from '@/src/components/violations/StatusBadge';
 import ResizableHeader from './ResizableHeader';
 
 interface LawItem {
@@ -27,13 +26,6 @@ interface LawItem {
   region: string | null;
 }
 
-interface ViolationStatItem {
-  id: number;
-  violationBasisCount: number;
-  punishmentBasisCount: number;
-  statusType: string;
-}
-
 interface PaginationInfo {
   currentPage: number;
   totalPages: number;
@@ -45,12 +37,11 @@ interface LawTableProps {
   laws: LawItem[];
   currentSort: string;
   currentOrder: 'asc' | 'desc';
-  violationStats?: ViolationStatItem[];
   searchParams?: Record<string, string>;
   pagination?: PaginationInfo;
 }
 
-export default function LawTable({ laws, currentSort, currentOrder, violationStats = [], searchParams = {}, pagination }: LawTableProps) {
+export default function LawTable({ laws, currentSort, currentOrder, searchParams = {}, pagination }: LawTableProps) {
   const router = useRouter();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -80,15 +71,8 @@ export default function LawTable({ laws, currentSort, currentOrder, violationSta
     documentNumber: 80,  // 稍微压缩
     promulgationDate: 90, // 稍微压缩
     effectiveDate: 90,   // 稍微压缩
-    violationStatus: 140, // 新增！违法行为关联列
     actions: 120,        // 重要！按钮需要空间
-    // 总计：1080px
   });
-
-  // 创建违法行为统计数据映射
-  const violationStatsMap = new Map(
-    violationStats.map((stat) => [stat.id, stat])
-  );
 
   const handleSort = (field: string) => {
     const newOrder = field === currentSort && currentOrder === 'asc' ? 'desc' : 'asc';
@@ -174,9 +158,7 @@ export default function LawTable({ laws, currentSort, currentOrder, violationSta
 
       {/* 移动端卡片视图 */}
       <div className="md:hidden space-y-3">
-        {laws.map((law) => {
-          const stat = violationStatsMap.get(law.id);
-          return (
+        {laws.map((law) => (
             <div key={law.id} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <Link href={`/law/${law.id}`} target="_blank" className="font-bold text-slate-900 hover:text-blue-600 text-sm leading-snug flex-1">
@@ -223,13 +205,9 @@ export default function LawTable({ laws, currentSort, currentOrder, violationSta
               <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
                 {law.issuingAuthority && <span className="truncate max-w-[120px]">{law.issuingAuthority}</span>}
                 {law.promulgationDate && <span>{formatDateForInput(law.promulgationDate)}</span>}
-                {stat && stat.violationBasisCount > 0 && (
-                  <span className="text-orange-500">违法{stat.violationBasisCount}条</span>
-                )}
               </div>
             </div>
-          );
-        })}
+          ))}
       </div>
 
       {/* 桌面端表格容器 */}
@@ -313,13 +291,6 @@ export default function LawTable({ laws, currentSort, currentOrder, violationSta
                   onClick={() => handleSort('effectiveDate')}
                 >
                   施行日期<SortIcon field="effectiveDate" />
-                </ResizableHeader>
-                <ResizableHeader
-                  width={getColumnWidth('violationStatus')}
-                  onResize={(e, data) => handleColumnResize('violationStatus', e, data)}
-                  dataKey="violationStatus"
-                >
-                  违法行为关联
                 </ResizableHeader>
                 <ResizableHeader
                   width={getColumnWidth('actions')}
@@ -421,28 +392,6 @@ export default function LawTable({ laws, currentSort, currentOrder, violationSta
                         onBlur={(e) => handleUpdateLaw(law.id, { effectiveDate: e.target.value ? new Date(e.target.value) : null })}
                         title={formatDateForInput(law.effectiveDate) || '暂无日期'}
                     />
-                  </td>
-                  <td className="px-3 py-3" style={{ width: `${getColumnWidth('violationStatus')}px` }}>
-                    {(() => {
-                      const stat = violationStatsMap.get(law.id);
-                      if (!stat || (stat.violationBasisCount === 0 && stat.punishmentBasisCount === 0)) {
-                        return (
-                          <div className="flex flex-col gap-1">
-                            <StatusBadge status="empty" />
-                          </div>
-                        );
-                      }
-                      return (
-                        <div className="flex flex-col gap-1">
-                          <div className="text-xs text-slate-600">
-                            {stat.violationBasisCount > 0 && <span>违法{stat.violationBasisCount}条</span>}
-                            {stat.violationBasisCount > 0 && stat.punishmentBasisCount > 0 && <span> + </span>}
-                            {stat.punishmentBasisCount > 0 && <span>处罚{stat.punishmentBasisCount}条</span>}
-                          </div>
-                          <StatusBadge status={stat.statusType} />
-                        </div>
-                      );
-                    })()}
                   </td>
                   <td className="px-3 py-3 text-center sticky-right-col" style={{ width: `${getColumnWidth('actions')}px`, position: 'sticky', right: '0px', backgroundColor: 'white', zIndex: 5, borderLeft: '2px solid #e2e8f0' }}>
                     <div className="flex items-center justify-center gap-1">

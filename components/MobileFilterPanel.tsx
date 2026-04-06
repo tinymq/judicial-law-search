@@ -3,15 +3,22 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
+type RegionGroup = {
+  province: string;
+  totalCount: number;
+  provinceOwnCount: number;
+  children: Array<{ name: string; count: number }>;
+};
+
 interface MobileFilterPanelProps {
   baseUrl: string;
   totalCount: number;
   levels: Array<{ level: string; _count: { id: number } }>;
-  categories: Array<{ category: string; _count: { id: number } }>;
-  regions: Array<{ region: string; _count: { id: number } }>;
+  industries: Array<{ id: number; name: string; _count: number }>;
+  regionGroups: RegionGroup[];
   years: Array<{ year: string; count: number }>;
   statuses: Array<{ status: string; _count: { id: number } }>;
-  selectedCategory: string;
+  selectedIndustry: string;
   selectedLevel: string;
   selectedYear: string;
   selectedRegion: string;
@@ -28,24 +35,25 @@ export default function MobileFilterPanel({
   baseUrl,
   totalCount,
   levels,
-  categories,
-  regions,
+  industries,
+  regionGroups,
   years,
   statuses,
-  selectedCategory,
+  selectedIndustry,
   selectedLevel,
   selectedYear,
   selectedRegion,
   selectedStatus,
 }: MobileFilterPanelProps) {
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'level' | 'category' | 'region' | 'year' | 'status'>('level');
+  const [activeTab, setActiveTab] = useState<'level' | 'industry' | 'region' | 'year' | 'status'>('level');
+  const [expandedProvince, setExpandedProvince] = useState<string | null>(null);
 
-  const hasFilter = selectedCategory || selectedLevel || selectedYear || selectedRegion || selectedStatus;
-  const filterCount = [selectedCategory, selectedLevel, selectedYear, selectedRegion, selectedStatus].filter(Boolean).length;
+  const hasFilter = selectedIndustry || selectedLevel || selectedYear || selectedRegion || selectedStatus;
+  const filterCount = [selectedIndustry, selectedLevel, selectedYear, selectedRegion, selectedStatus].filter(Boolean).length;
 
   const currentParams: Record<string, string> = {};
-  if (selectedCategory) currentParams.category = selectedCategory;
+  if (selectedIndustry) currentParams.industry = selectedIndustry;
   if (selectedLevel) currentParams.level = selectedLevel;
   if (selectedYear) currentParams.year = selectedYear;
   if (selectedRegion) currentParams.region = selectedRegion;
@@ -53,7 +61,7 @@ export default function MobileFilterPanel({
 
   const tabs = [
     { key: 'level' as const, label: '位阶', active: !!selectedLevel },
-    { key: 'category' as const, label: '领域', active: !!selectedCategory },
+    { key: 'industry' as const, label: '行业', active: !!selectedIndustry },
     { key: 'region' as const, label: '区域', active: !!selectedRegion },
     { key: 'year' as const, label: '年份', active: !!selectedYear },
     { key: 'status' as const, label: '时效', active: !!selectedStatus },
@@ -79,20 +87,6 @@ export default function MobileFilterPanel({
             <polyline points="6 9 12 15 18 9"/>
           </svg>
         </button>
-
-        {/* Quick links */}
-        <Link
-          href="/ai"
-          className="px-3 py-1.5 rounded-full text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
-        >
-          AI分析
-        </Link>
-        <Link
-          href="/violations"
-          className="px-3 py-1.5 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200"
-        >
-          违法行为
-        </Link>
 
         {hasFilter && (
           <Link href={baseUrl} className="ml-auto text-xs text-slate-400 hover:text-slate-600">
@@ -155,15 +149,15 @@ export default function MobileFilterPanel({
               </div>
             )}
 
-            {activeTab === 'category' && (
+            {activeTab === 'industry' && (
               <div className="flex flex-wrap gap-2">
-                {categories.map(item => {
-                  const isSelected = selectedCategory === item.category;
+                {industries.map(item => {
+                  const isSelected = selectedIndustry === String(item.id);
                   const params = { ...currentParams };
-                  if (isSelected) { delete params.category; } else { params.category = item.category; }
+                  if (isSelected) { delete params.industry; } else { params.industry = String(item.id); }
                   return (
                     <Link
-                      key={item.category}
+                      key={item.id}
                       href={buildUrl(baseUrl, params)}
                       onClick={() => setOpen(false)}
                       className={`px-2.5 py-1 rounded-full text-sm transition-colors ${
@@ -172,7 +166,7 @@ export default function MobileFilterPanel({
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      {item.category} ({item._count.id})
+                      {item.name} ({item._count})
                     </Link>
                   );
                 })}
@@ -180,24 +174,77 @@ export default function MobileFilterPanel({
             )}
 
             {activeTab === 'region' && (
-              <div className="flex flex-wrap gap-2">
-                {regions.map(item => {
-                  const isSelected = selectedRegion === item.region;
-                  const params = { ...currentParams };
-                  if (isSelected) { delete params.region; } else { params.region = item.region; }
+              <div className="space-y-1">
+                {regionGroups.map(group => {
+                  const isProvinceSelected = selectedRegion === group.province;
+                  const hasChildren = group.children.length > 0;
+                  const isExpanded = expandedProvince === group.province;
+
                   return (
-                    <Link
-                      key={item.region}
-                      href={buildUrl(baseUrl, params)}
-                      onClick={() => setOpen(false)}
-                      className={`px-2.5 py-1 rounded-full text-sm transition-colors ${
-                        isSelected
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {item.region} ({item._count.id})
-                    </Link>
+                    <div key={group.province}>
+                      <div className="flex items-center gap-1">
+                        {hasChildren ? (
+                          <button
+                            onClick={() => setExpandedProvince(isExpanded ? null : group.province)}
+                            className="flex-1 flex items-center gap-1 px-2 py-1 rounded text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                          >
+                            <svg className={`w-3 h-3 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                            <span className={isProvinceSelected || group.children.some(c => selectedRegion === c.name) ? 'text-blue-600 font-medium' : ''}>
+                              {group.province} ({group.totalCount})
+                            </span>
+                          </button>
+                        ) : (
+                          <Link
+                            href={buildUrl(baseUrl, { ...currentParams, region: isProvinceSelected ? '' : group.province })}
+                            onClick={() => setOpen(false)}
+                            className={`flex-1 px-2 py-1 rounded text-sm transition-colors ${
+                              isProvinceSelected
+                                ? 'bg-blue-600 text-white'
+                                : 'text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            {group.province} ({group.totalCount})
+                          </Link>
+                        )}
+                      </div>
+                      {hasChildren && isExpanded && (
+                        <div className="pl-6 flex flex-wrap gap-1 mt-1 mb-2">
+                          {group.provinceOwnCount > 0 && (
+                            <Link
+                              key={`${group.province}-own`}
+                              href={buildUrl(baseUrl, { ...currentParams, region: isProvinceSelected ? '' : group.province })}
+                              onClick={() => setOpen(false)}
+                              className={`px-2 py-0.5 rounded text-xs transition-colors ${
+                                isProvinceSelected
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                              }`}
+                            >
+                              省级 ({group.provinceOwnCount})
+                            </Link>
+                          )}
+                          {group.children.map(city => {
+                            const isCitySelected = selectedRegion === city.name;
+                            return (
+                              <Link
+                                key={city.name}
+                                href={buildUrl(baseUrl, { ...currentParams, region: isCitySelected ? '' : city.name })}
+                                onClick={() => setOpen(false)}
+                                className={`px-2 py-0.5 rounded text-xs transition-colors ${
+                                  isCitySelected
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                }`}
+                              >
+                                {city.name} ({city.count})
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>

@@ -11,11 +11,29 @@ const DATA_DIR = path.join(__dirname, '../laws');
 const DATE_REGEX = /(\d{4})年(\d{1,2})月(\d{1,2})日/g;
 const DOC_NUMBER_REGEX = /（([^(]+[第]号[）)]/; // 提取括号内的发文字号
 
-// 生成法规组ID
+// 生成法规组ID（与 src/lib/law-grouping.ts 保持一致）
+function buildLawBaseTitle(title) {
+  const VERSION_RE = /[\(\[（【]\s*\d{4}\s*(?:年)?(?:[^)\]）】]{0,20})[\)\]）】]\s*$/g;
+  const TRAILING_RE = /(修订|修正|修改|公布|发布|施行|实施|暂行|试行)\s*$/g;
+  let normalized = title
+    .replace(/（/g, '(').replace(/）/g, ')')
+    .replace(/【/g, '[').replace(/】/g, ']')
+    .replace(/\u3000/g, ' ')
+    .replace(/[《》"'""'']/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  let current = normalized, previous = '';
+  while (current !== previous) {
+    previous = current;
+    current = current.replace(VERSION_RE, '').trim();
+    current = current.replace(TRAILING_RE, '').trim();
+  }
+  return current.replace(/\s+/g, ' ').trim();
+}
+
 function generateLawGroupId(title) {
-  // 使用 MD5 哈希生成唯一 ID
-  const hash = crypto.createHash('md5').update(title).digest('hex');
-  // 取前 12 位作为 groupId
+  const baseTitle = buildLawBaseTitle(title);
+  const hash = crypto.createHash('md5').update(baseTitle).digest('hex');
   return `LAW_${hash.substring(0, 12).toUpperCase()}`;
 }
 

@@ -7,11 +7,7 @@ import BackToTopButton from './BackToTopButton';
 import LawHistory from './LawHistory';
 import TableOfContents from './TableOfContents';
 import type { Metadata } from 'next';
-import { getLawViolations } from '@/app/admin/actions';
-import ViolationCardFull from '@/src/components/violations/ViolationCardFull';
-import ExpandCollapseAll from '@/src/components/violations/ExpandCollapseAll';
 import { ADMIN_CONFIG } from '@/app/admin/admin-config';
-import AIExtractWrapper from './AIExtractWrapper';
 import LawDetailPrototype from './LawDetailPrototype';
 import RecentViewTracker from '@/src/components/RecentViewTracker';
 import { resolveStatus, statusColor } from '@/src/lib/category-config';
@@ -93,9 +89,6 @@ export default async function LawDetail({
       status: true
     }
   });
-
-  // 查询该法规的违法行为
-  const lawViolations = await getLawViolations(law.id);
 
   // 1. 生成目录数据（章-节-条三层结构）
   const toc: { title: string; id: string; level: 'chapter' | 'section' | 'article'; children?: any[] }[] = [];
@@ -281,7 +274,6 @@ export default async function LawDetail({
         <LawDetailPrototype
           law={law}
           lawHistory={lawHistory}
-          lawViolations={lawViolations}
           toc={toc}
         />
         <BackToTopButton />
@@ -326,15 +318,6 @@ export default async function LawDetail({
             <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight mb-6 tracking-tight border-l-8 border-blue-600 pl-6">
                 {law.title}
             </h1>
-
-            {lawViolations.merged.length > 0 && (
-              <div className="mb-8 flex items-center gap-3">
-                <a href="#violations" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-                  📋 相关违法行为
-                  <span className="bg-blue-500 px-2 py-0.5 rounded text-xs">{lawViolations.merged.length}</span>
-                </a>
-              </div>
-            )}
 
             {/* 2. 序言内容 */}
             {law.preamble && (
@@ -484,59 +467,6 @@ export default async function LawDetail({
             })}
           </div>
 
-          {/* 相关违法行为区块 */}
-          <div id="violations" className="mt-16 scroll-mt-20">
-            {/* 醒目分隔线 */}
-            <div className="flex items-center gap-4 mb-8">
-              <div className="h-1 bg-gradient-to-r from-red-400 to-orange-400 flex-1 rounded-full"></div>
-              <span className="text-sm font-bold text-red-600 bg-red-50 px-4 py-1.5 rounded-full border border-red-200">执法相关</span>
-              <div className="h-1 bg-gradient-to-r from-orange-400 to-red-400 flex-1 rounded-full"></div>
-            </div>
-
-            <div className="bg-gradient-to-b from-red-50/60 to-orange-50/30 rounded-2xl border border-red-200/60 p-6 md:p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                  <span className="inline-flex items-center justify-center w-8 h-8 bg-red-600 text-white rounded-lg text-base">⚖</span>
-                  相关违法行为
-                  <span className="text-sm font-normal text-slate-500">
-                    ({lawViolations.merged.length}条)
-                  </span>
-                </h2>
-                <div className="flex items-center gap-3">
-                  <AIExtractWrapper
-                    lawId={law.id}
-                    lawTitle={law.title}
-                    articles={law.articles as any}
-                  />
-                  {lawViolations.merged.length > 1 && <ExpandCollapseAll />}
-                  <a href="#top" className="px-3 py-2 text-sm font-medium text-slate-500 border border-slate-200 rounded-lg hover:bg-white/80 hover:text-slate-700 transition-colors">
-                    ↑ 返回顶部
-                  </a>
-                </div>
-              </div>
-
-              {lawViolations.merged.length === 0 ? (
-                <div className="text-center py-12 bg-white/70 rounded-lg border border-slate-200">
-                  <div className="text-4xl mb-4">📭</div>
-                  <p className="text-slate-600 mb-6">该法规暂未关联任何违法行为</p>
-                  <div className="flex justify-center gap-4 flex-wrap">
-                    <Link
-                      href="/admin/violations/new"
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      → 手动录入
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {lawViolations.merged.map((v) => (
-                    <ViolationCardFull key={v.id} violation={v} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
         </main>
       </div>
 

@@ -29,7 +29,7 @@
 ### 标准目录结构
 
 ```
-market-law-search/
+judicial-law-search/
 ├── src/
 │   └── lib/              # ✅ 所有工具函数统一放这里
 │       ├── db.ts
@@ -84,7 +84,7 @@ market-law-search/
 ## 📁 当前项目目录结构
 
 ```
-market-law-search/
+judicial-law-search/
 ├── app/                          # Next.js 应用
 │   ├── admin/                   # 管理后台
 │   │   ├── actions.ts          # 后端API（重要）
@@ -96,14 +96,6 @@ market-law-search/
 │   │   │   └── ExportButton.tsx # JSON导出按钮
 │   │   ├── utils/              # 工具函数
 │   │   │   └── categoryCode.ts  # 编码映射工具
-│   │   └── violations/         # 违法行为管理
-│   │       ├── page.tsx         # 列表页
-│   │       ├── new/             # 创建页
-│   │       └── [id]/edit/       # 编辑页
-│   ├── violations/              # 违法行为前端
-│   │   ├── page.tsx            # 查询列表页
-│   │   ├── [id]/page.tsx       # 详情页
-│   │   └── ViolationList.tsx   # 查询组件
 │   ├── law/[id]/               # 法规详情页
 │   └── page.tsx                # 首页（含移动端适配）
 ├── components/                  # 共享组件
@@ -112,10 +104,6 @@ market-law-search/
 │   ├── LawSidebar.tsx          # 法规侧边栏筛选
 │   └── ThemeToggle.tsx         # 主题切换
 ├── src/
-│   ├── components/              # React 组件库
-│   │   └── violations/          # 违法行为组件
-│   │       ├── StatusBadge.tsx   # 状态标签
-│   │       └── ViolationCard.tsx # 违法行为卡片
 │   └── lib/                     # ✅ 工具函数库（统一位置）
 │       ├── db.ts
 │       ├── category-config.ts
@@ -133,16 +121,11 @@ market-law-search/
 │   ├── backups/                # 备份脚本和数据
 │   ├── archive/                # 归档的临时脚本
 │   ├── start-server.js         # 服务器启动脚本
-│   ├── backup-violations.ts    # 数据备份
-│   ├── regenerate-violation-codes.ts  # 重新生成编码
-│   ├── diagnose-parsing.ts     # 诊断解析问题
-│   ├── check-raw-text.ts       # 检查文本格式
-│   ├── parse-violation-excel.ts # 违法行为Excel解析
-│   └── import-*.ts             # 各种导入脚本
+│   ├── start-server.js         # 服务器启动脚本
+│   └── archive/                # 归档的临时脚本
 ├── docs/                        # 项目文档
 │   ├── FILE_INDEX.md            # 本文件（总入口）
 │   ├── CHANGELOG.md             # 版本历史
-│   ├── VIOLATION_FILE_INDEX.md  # 违法行为模块索引
 │   └── ...其他文档
 ├── CLAUDE.md                    # AI配置文件
 ├── README.md                    # 项目说明
@@ -166,16 +149,7 @@ market-law-search/
 - `docs/PROJECT_ARCHITECTURE.md` - 架构说明
 - `docs/DATA_DICTIONARY.md` - 数据字典
 
-### 2. 违法行为模块 🆕
-**核心文件**：
-- `app/admin/violations/` - 管理页面
-- `app/violations/` - 前端页面
-- `app/admin/utils/categoryCode.ts` - 编码映射
-- `lib/search-utils.ts` - 搜索优化
-
-**详细索引**：`docs/VIOLATION_FILE_INDEX.md`
-
-### 3. 搜索功能模块
+### 2. 搜索功能模块
 **核心文件**：
 - `app/page.tsx` - 首页搜索
 - `app/admin/actions.ts` - 搜索API
@@ -188,12 +162,8 @@ market-law-search/
 ## 🔧 工具和脚本
 
 ### 数据管理
-- `scripts/backup-violations.ts` - 备份Violation数据
-- `scripts/regenerate-violation-codes.ts` - 重新生成编码
-
-### 诊断工具
-- `scripts/diagnose-parsing.ts` - 诊断法规解析
-- `scripts/check-raw-text.ts` - 检查文本格式
+- `scripts/start-server.js` - 服务器启动脚本
+- `scripts/backup-database.js` - 数据库备份
 
 ---
 
@@ -233,26 +203,17 @@ app/page.tsx
 # 法规详情
 app/law/[id]/page.tsx
 
-# 违法行为管理
-app/admin/violations/page.tsx          # 列表
-app/admin/violations/new/page.tsx      # 创建
-app/admin/violations/[id]/edit/page.tsx # 编辑
-
-# 违法行为查询
-app/violations/page.tsx                  # 列表
-app/violations/[id]/page.tsx           # 详情
 ```
 
 ### 查找后端API
 **位置**：`app/admin/actions.ts`
 
 **主要函数**：
-- `createViolation()` - 创建违法行为
-- `updateViolation()` - 更新违法行为
-- `deleteViolation()` - 删除违法行为
-- `searchLegalProvisions()` - 搜索法条
-- `getAllViolations()` - 获取所有违法行为
-- `getViolation()` - 获取单个违法行为
+- `searchLaws()` - 搜索法规
+- `getLaw()` - 获取单个法规
+- `createLaw()` - 创建法规
+- `updateLaw()` - 更新法规
+- `deleteLaw()` - 删除法规
 
 ### 查找数据库模型
 **位置**：`prisma/schema.prisma`
@@ -262,7 +223,6 @@ app/violations/[id]/page.tsx           # 详情
 - `Article` - 条
 - `Paragraph` - 款
 - `Item` - 项
-- `Violation` - 违法行为 🆕
 
 ---
 

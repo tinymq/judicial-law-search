@@ -7,7 +7,6 @@ import LawSidebar from '@/components/LawSidebar';
 import ExportButton from './ExportButton';
 import ThemeToggle from '@/components/ThemeToggle';
 import type { Metadata } from 'next';
-import { getLawsWithViolationStats } from '../actions';
 import { ADMIN_CONFIG } from '../admin-config';
 import MobileFilterPanel from '@/components/MobileFilterPanel';
 import '../admin-styles.css';
@@ -173,9 +172,6 @@ export default async function AdminLawsPage({
 
   const totalCount = categories.reduce((a, b) => a + b._count.id, 0);
 
-  // 7. 获取违法行为统计数据
-  const violationStats = await getLawsWithViolationStats();
-
   return (
     <div className={`min-h-screen bg-slate-100 font-sans text-slate-900 ${themeClass}`}>
       {/* 顶部导航栏 */}
@@ -320,7 +316,6 @@ export default async function AdminLawsPage({
               laws={laws}
               currentSort={sortField}
               currentOrder={sortOrder}
-              violationStats={violationStats}
               searchParams={{ q: query, category: selectedCategory, level: selectedLevel, year: selectedYear, region: selectedRegion, pageSize: pageSize !== 50 ? String(pageSize) : '' }}
               pagination={{ currentPage: safePage, totalPages, filteredCount, pageSize }}
             />

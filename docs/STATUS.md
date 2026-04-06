@@ -1,11 +1,11 @@
-# Project Status: Market Law Search (可为法规随手查)
+# Project Status: Judicial Law Search (司法领域执法监督法规检索系统)
 
-**Last Updated:** 2026-03-29 (v1.8.0 - 管理后台优化、移动端适配、分页)
+**Last Updated:** 2026-04-06 (v2.0.0-dev - 从 market-law-search 改造)
 **Context:** This document serves as a checkpoint to restore context for development sessions.
 
 ## 1. Project Overview
-*   **Name:** Market Law Search (可为法规随手查)
-*   **Goal:** A fast, searchable database of Chinese market regulation laws (food safety, advertising, monopoly, etc.).
+*   **Name:** Judicial Law Search (司法领域执法监督法规检索系统)
+*   **Goal:** A fast, searchable database of Chinese laws for judicial enforcement supervision, serving provincial justice departments.
 *   **Tech Stack:**
     *   **Framework:** Next.js 16.1.3 (App Router)
     *   **Language:** TypeScript 5 (ES2018 target)
@@ -146,7 +146,7 @@
 *   **Unified Configuration:** ✅ Implemented centralized category config (v1.6.4).
 *   **Category Expansion:** ✅ Expanded to 13 levels and 17 categories (v1.6.4).
 *   **Data Quality:** ✅ Fixed 136 misclassified laws, merged duplicate categories (v1.6.4).
-*   **Version Control:** ✅ Git remote configured (https://github.com/tinymq/market-law-search.git).
+*   **Version Control:** ✅ Git remote configured.
 *   **Auto-extract Revision History:** ✅ Automatically extract from brackets (v1.6.5).
 *   **Year Marker Enhancement:** ✅ Auto-convert (YYYY修订) to (YYYY年修订) (v1.6.5).
 *   **Auto-update Related Laws:** ✅ Auto-update old versions when new law is linked (v1.6.5).

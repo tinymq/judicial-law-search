@@ -30,10 +30,10 @@ const jetBrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "可为法规随手查",
-    template: "%s - 可为法规随手查",
+    default: "执法监督法规查",
+    template: "%s - 执法监督法规查",
   },
-  description: "市场监管法规检索系统，支持法规全文搜索、分类筛选、详情查看和在线管理",
+  description: "司法领域执法监督法规检索系统，支持法规全文搜索、行业分类筛选、执法事项目录管理",
 };
 
 export default function RootLayout({

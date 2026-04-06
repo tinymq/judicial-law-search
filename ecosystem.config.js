@@ -1,8 +1,8 @@
 module.exports = {
   apps: [{
-    name: 'market-law-search',
+    name: 'judicial-law-search',
     script: 'scripts/start-server.js',
-    cwd: 'C:\\Users\\26371\\Documents\\MLocalCoding\\market-law-search',
+    cwd: 'C:\\Users\\26371\\Documents\\MLocalCoding\\judicial-law-search',
     instances: 1,
     autorestart: true,
     watch: false,

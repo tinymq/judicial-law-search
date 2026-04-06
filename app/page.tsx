@@ -8,6 +8,7 @@ import type { Metadata } from 'next';
 import { ADMIN_CONFIG } from './admin/admin-config';
 import { buildLawBaseTitle, normalizeLawTitle } from '@/src/lib/law-grouping';
 import { resolveStatus, statusColor } from '@/src/lib/category-config';
+import { PROVINCES, CITY_TO_PROVINCE, COUNTY_TO_PROVINCE } from '@/src/lib/region-config';
 import RecentViews from '@/src/components/RecentViews';
 import MobileFilterPanel from '@/components/MobileFilterPanel';
 import './app-styles.css';
@@ -15,7 +16,7 @@ import './app-styles.css';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: '首页 - 可为法规随手查',
+  title: '首页 - 执法监督法规查',
 };
 
 type SearchLaw = {
@@ -23,19 +24,78 @@ type SearchLaw = {
   title: string;
   issuingAuthority: string | null;
   documentNumber: string | null;
-  preamble: string | null;
+  preamble?: string | null;
   promulgationDate: Date | null;
   effectiveDate: Date | null;
   status: string | null;
   level: string;
   category: string;
   region: string | null;
+  industryId?: number | null;
   lawGroupId: string | null;
   createdAt: Date;
   updatedAt: Date;
   searchMatchType?: 'title_exact' | 'title_base_exact' | 'title_prefix' | 'title_contains' | 'content';
   searchScore?: number;
 };
+
+function FilterStatusBar({ selectedLevel, selectedIndustry, selectedRegion, selectedYear, selectedStatus, query, industryName }: {
+  selectedLevel: string; selectedIndustry: string; selectedRegion: string; selectedYear: string; selectedStatus: string; query: string; industryName?: string;
+}) {
+  const allFilters: Record<string, string> = {};
+  if (selectedIndustry) allFilters.industry = selectedIndustry;
+  if (selectedLevel) allFilters.level = selectedLevel;
+  if (selectedYear) allFilters.year = selectedYear;
+  if (selectedRegion) allFilters.region = selectedRegion;
+  if (selectedStatus) allFilters.status = selectedStatus;
+  const removeFilter = (key: string) => {
+    const rest = { ...allFilters };
+    delete rest[key];
+    const qs = Object.entries(rest).map(([k, v]) => `${k}=${v}`).join('&');
+    return qs ? `/?${qs}` : '/';
+  };
+  return (
+    <div className="mb-4 flex items-center gap-2 text-sm flex-wrap">
+      <span className="text-slate-500">已选:</span>
+      {selectedLevel && (
+        <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-100 flex items-center gap-1">
+          {selectedLevel}
+          <Link href={removeFilter('level')} className="hover:text-purple-900">×</Link>
+        </span>
+      )}
+      {selectedIndustry && (
+        <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-100 flex items-center gap-1">
+          {industryName || '行业'}
+          <Link href={removeFilter('industry')} className="hover:text-indigo-900">×</Link>
+        </span>
+      )}
+      {selectedRegion && (
+        <span className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded border border-teal-100 flex items-center gap-1">
+          {selectedRegion}
+          <Link href={removeFilter('region')} className="hover:text-teal-900">×</Link>
+        </span>
+      )}
+      {selectedYear && (
+        <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-100 flex items-center gap-1">
+          {selectedYear}年
+          <Link href={removeFilter('year')} className="hover:text-green-900">×</Link>
+        </span>
+      )}
+      {selectedStatus && (
+        <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded border border-orange-100 flex items-center gap-1">
+          {selectedStatus}
+          <Link href={removeFilter('status')} className="hover:text-orange-900">×</Link>
+        </span>
+      )}
+      {query && (
+        <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-100">
+          搜: {query}
+        </span>
+      )}
+      <Link href="/" className="text-slate-400 hover:text-slate-600 text-xs underline ml-auto">重置所有</Link>
+    </div>
+  );
+}
 
 function compareByDateDesc(a: SearchLaw, b: SearchLaw) {
   if (a.effectiveDate && b.effectiveDate) {
@@ -95,11 +155,12 @@ function scoreLawTitleMatch(title: string, query: string) {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; level?: string; year?: string; region?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; industry?: string; level?: string; year?: string; region?: string; status?: string }>;
 }) {
   const params = await searchParams;
   const query = params.q ?? '';
   const selectedCategory = params.category ?? '';
+  const selectedIndustry = params.industry ?? '';
   const selectedLevel = params.level ?? '';
   const selectedYear = params.year ?? '';
   const selectedRegion = params.region ?? '';
@@ -149,43 +210,136 @@ export default async function Home({
   });
   categories.sort((a, b) => b._count.id - a._count.id);
 
-  // 2.5 获取区域统计
-  const regions = await prisma.law.groupBy({
+  // 2.5 获取区域统计，按省份分组
+  const rawRegions = await prisma.law.groupBy({
     by: ['region'],
     _count: { id: true },
     where: { region: { not: null } },
-    orderBy: { region: 'asc' },
   });
-  regions.sort((a, b) => b._count.id - a._count.id);
+  const typedRegions = rawRegions as Array<{ region: string; _count: { id: number } }>;
 
-  // 类型断言：确保 region 不为 null（已通过 where 过滤）
-  const typedRegions = regions as Array<{ region: string; _count: { id: number } }>;
+  // 构建省份→城市层级结构
+  const provinceMap = new Map<string, { province: string; totalCount: number; provinceOwnCount: number; children: Array<{ name: string; count: number }> }>();
 
-  // 3. 获取年份统计
-  const allDates = await prisma.law.findMany({
-    select: { promulgationDate: true },
-    where: { promulgationDate: { not: null } }
-  });
+  // 初始化"全国"
+  const nationwideEntry = typedRegions.find(r => r.region === '全国');
 
-  const yearStats: Record<string, number> = {};
-  allDates.forEach(law => {
-    if (law.promulgationDate) {
-      const y = law.promulgationDate.getFullYear().toString();
-      yearStats[y] = (yearStats[y] || 0) + 1;
+  for (const r of typedRegions) {
+    if (r.region === '全国') continue;
+
+    // 判断该区域属于哪个省
+    const prov = PROVINCES.find(p => p.shortName === r.region);
+    if (prov) {
+      // 本身就是省级
+      const existing = provinceMap.get(prov.code);
+      if (existing) {
+        existing.totalCount += r._count.id;
+        existing.provinceOwnCount += r._count.id;
+      } else {
+        provinceMap.set(prov.code, { province: prov.shortName, totalCount: r._count.id, provinceOwnCount: r._count.id, children: [] });
+      }
+      continue;
     }
-  });
 
-  const years = Object.entries(yearStats)
-    .map(([year, count]) => ({ year, count }))
-    .sort((a, b) => parseInt(b.year) - parseInt(a.year));
+    // 城市
+    const cityProvinceCode = CITY_TO_PROVINCE[r.region];
+    if (cityProvinceCode) {
+      const existing = provinceMap.get(cityProvinceCode);
+      if (existing) {
+        existing.totalCount += r._count.id;
+        existing.children.push({ name: r.region, count: r._count.id });
+      } else {
+        const provInfo = PROVINCES.find(p => p.code === cityProvinceCode);
+        provinceMap.set(cityProvinceCode, {
+          province: provInfo?.shortName || '未知',
+          totalCount: r._count.id,
+          provinceOwnCount: 0,
+          children: [{ name: r.region, count: r._count.id }],
+        });
+      }
+      continue;
+    }
+
+    // 自治县
+    const countyProvinceCode = COUNTY_TO_PROVINCE[r.region];
+    if (countyProvinceCode) {
+      const existing = provinceMap.get(countyProvinceCode);
+      if (existing) {
+        existing.totalCount += r._count.id;
+        existing.children.push({ name: r.region, count: r._count.id });
+      } else {
+        const provInfo = PROVINCES.find(p => p.code === countyProvinceCode);
+        provinceMap.set(countyProvinceCode, {
+          province: provInfo?.shortName || '未知',
+          totalCount: r._count.id,
+          provinceOwnCount: 0,
+          children: [{ name: r.region, count: r._count.id }],
+        });
+      }
+      continue;
+    }
+
+    // 未知区域 — 归入"其他"
+    const otherKey = '999999';
+    const existing = provinceMap.get(otherKey);
+    if (existing) {
+      existing.totalCount += r._count.id;
+      existing.children.push({ name: r.region, count: r._count.id });
+    } else {
+      provinceMap.set(otherKey, { province: '其他', totalCount: r._count.id, provinceOwnCount: 0, children: [{ name: r.region, count: r._count.id }] });
+    }
+  }
+
+  // 按法规数量降序排列，children 内部也按数量降序
+  const regionGroups = Array.from(provinceMap.values())
+    .sort((a, b) => b.totalCount - a.totalCount)
+    .map(g => ({ ...g, children: g.children.sort((a, b) => b.count - a.count) }));
+
+  // 加上"全国"在最前
+  if (nationwideEntry) {
+    regionGroups.unshift({ province: '全国', totalCount: nationwideEntry._count.id, provinceOwnCount: nationwideEntry._count.id, children: [] });
+  }
+
+  // 2.6 获取行业统计
+  const industryStats = await prisma.industry.findMany({
+    where: {
+      laws: { some: {} }, // 只显示有法规的行业
+    },
+    select: {
+      id: true,
+      name: true,
+      _count: { select: { laws: true } },
+    },
+    orderBy: { order: 'asc' },
+  });
+  const industries = industryStats.map(ind => ({
+    id: ind.id,
+    name: ind.name,
+    _count: ind._count.laws,
+  }));
+
+  // 3. 获取年份统计（使用原生 SQL 避免加载所有日期）
+  const yearRows = await prisma.$queryRaw<Array<{ year: string; cnt: bigint }>>`
+    SELECT strftime('%Y', promulgationDate / 1000, 'unixepoch') as year, COUNT(*) as cnt
+    FROM Law
+    WHERE promulgationDate IS NOT NULL
+    GROUP BY year
+    ORDER BY year DESC
+  `;
+  const years = yearRows.map(r => ({ year: r.year, count: Number(r.cnt) }));
 
   // 4. 构建过滤条件
   const where: any = {};
 
   if (selectedCategory) where.category = selectedCategory;
+  if (selectedIndustry) where.industryId = parseInt(selectedIndustry);
   if (selectedLevel) where.level = selectedLevel;
-  if (selectedRegion) where.region = selectedRegion;
   if (selectedStatus) where.status = selectedStatus;
+
+  // 区域过滤：精确匹配
+  if (selectedRegion) {
+    where.region = selectedRegion;
+  }
 
   if (selectedYear) {
     const start = new Date(`${selectedYear}-01-01`);
@@ -199,11 +353,19 @@ export default async function Home({
 
   // 5. 查询法规列表
   if (query) {
+    const selectFields = {
+      id: true, title: true, issuingAuthority: true, documentNumber: true,
+      promulgationDate: true, effectiveDate: true, status: true, level: true,
+      category: true, region: true, industryId: true, lawGroupId: true,
+      createdAt: true, updatedAt: true,
+    } as const;
+
     const titleMatchedLaws = await prisma.law.findMany({
       where: {
         ...where,
         title: { contains: query }
       },
+      select: selectFields,
     });
 
     const scoredTitleMatches: SearchLaw[] = titleMatchedLaws
@@ -238,6 +400,7 @@ export default async function Home({
           }
         }
       },
+      select: selectFields,
       take: 50,
     });
 
@@ -255,13 +418,23 @@ export default async function Home({
   } else {
     laws = await prisma.law.findMany({
       where,
-    });
-    laws.sort(compareByDateDesc);
+      select: {
+        id: true, title: true, issuingAuthority: true, documentNumber: true,
+        promulgationDate: true, effectiveDate: true, status: true, level: true,
+        category: true, region: true, industryId: true, lawGroupId: true,
+        createdAt: true, updatedAt: true,
+      },
+      orderBy: [
+        { effectiveDate: 'desc' },
+        { promulgationDate: 'desc' },
+      ],
+      take: 200,
+    }) as SearchLaw[];
   }
 
   // 7. 按领域分组（如果没有搜索和筛选）
   // 使用明确的标志确保服务端和客户端渲染一致
-  const shouldShowGrouped = !query && !selectedLevel && !selectedYear && !selectedCategory && !selectedRegion;
+  const shouldShowGrouped = !query && !selectedLevel && !selectedYear && !selectedCategory && !selectedIndustry && !selectedRegion && !selectedStatus;
   const groupedLaws = shouldShowGrouped
     ? laws.reduce((acc, law) => {
         const cat = law.category || '未分类';
@@ -301,6 +474,7 @@ export default async function Home({
                     className="w-full pl-9 pr-4 py-1.5 bg-slate-100 border-none rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all outline-none"
                 />
                 {selectedCategory && <input type="hidden" name="category" value={selectedCategory} />}
+                {selectedIndustry && <input type="hidden" name="industry" value={selectedIndustry} />}
                 {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
                 {selectedYear && <input type="hidden" name="year" value={selectedYear} />}
                 {selectedRegion && <input type="hidden" name="region" value={selectedRegion} />}
@@ -308,8 +482,8 @@ export default async function Home({
             </form>
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                <Link href="/ai" className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
-                    AI分析
+                <Link href="/enforcement" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">
+                    执法事项
                 </Link>
                 <Link href="/admin/laws" target="_blank" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">
                     后台管理
@@ -331,6 +505,7 @@ export default async function Home({
                     className="w-full pl-9 pr-4 py-1.5 bg-slate-100 border-none rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all outline-none"
                 />
                 {selectedCategory && <input type="hidden" name="category" value={selectedCategory} />}
+                {selectedIndustry && <input type="hidden" name="industry" value={selectedIndustry} />}
                 {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
                 {selectedYear && <input type="hidden" name="year" value={selectedYear} />}
                 {selectedRegion && <input type="hidden" name="region" value={selectedRegion} />}
@@ -344,11 +519,11 @@ export default async function Home({
         baseUrl="/"
         totalCount={totalCount}
         levels={levels}
-        categories={categories}
-        regions={typedRegions}
+        industries={industries}
+        regionGroups={regionGroups}
         years={years}
         statuses={statuses}
-        selectedCategory={selectedCategory}
+        selectedIndustry={selectedIndustry}
         selectedLevel={selectedLevel}
         selectedYear={selectedYear}
         selectedRegion={selectedRegion}
@@ -360,25 +535,6 @@ export default async function Home({
         <div className="w-56 shrink-0 hidden md:block h-[calc(100vh-3.5rem)] sticky top-14 overflow-y-auto">
           {/* 快捷入口 - 固定在顶部 */}
           <div className="sticky top-0 bg-slate-50 pb-2 z-20 space-y-2">
-            <Link
-              href="/ai"
-              className="block px-2 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm"
-            >
-              <div className="flex items-center justify-center gap-2 text-sm font-bold text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
-                <span>AI 案件分析</span>
-              </div>
-            </Link>
-            <Link
-              href="/violations"
-              target="_blank"
-              className="block px-2 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <div className="flex items-center justify-center gap-2 text-sm font-bold text-blue-700">
-                <span>&#9878;&#65039;</span>
-                <span>查询违法行为</span>
-              </div>
-            </Link>
           </div>
 
           {/* 最近浏览 */}
@@ -391,11 +547,11 @@ export default async function Home({
             baseUrl="/"
             totalCount={totalCount}
             levels={levels}
-            categories={categories}
-            regions={typedRegions}
+            industries={industries}
+            regionGroups={regionGroups}
             years={years}
             statuses={statuses}
-            selectedCategory={selectedCategory}
+            selectedIndustry={selectedIndustry}
             selectedLevel={selectedLevel}
             selectedYear={selectedYear}
             selectedRegion={selectedRegion}
@@ -404,48 +560,18 @@ export default async function Home({
         </div>
 
         {/* 右侧主内容区 */}
-        <main className="flex-1 min-w-0" key={`${query}-${selectedCategory}-${selectedLevel}-${selectedYear}-${selectedRegion}-${selectedStatus}`}>
+        <main className="flex-1 min-w-0" key={`${query}-${selectedCategory}-${selectedIndustry}-${selectedLevel}-${selectedYear}-${selectedRegion}-${selectedStatus}`}>
             {/* 筛选状态栏 */}
-            {(selectedCategory || selectedLevel || selectedYear || selectedRegion || selectedStatus || query) && (
-                <div className="mb-4 flex items-center gap-2 text-sm flex-wrap">
-                    <span className="text-slate-500">已选:</span>
-                    {selectedLevel && (
-                        <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-100 flex items-center gap-1">
-                            {selectedLevel}
-                            <Link href={`/?${selectedCategory ? `category=${selectedCategory}` : ''}${selectedYear ? `&year=${selectedYear}` : ''}${selectedRegion ? `&region=${selectedRegion}` : ''}`} className="hover:text-purple-900">×</Link>
-                        </span>
-                    )}
-                    {selectedCategory && (
-                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100 flex items-center gap-1">
-                            {selectedCategory}
-                            <Link href={`/?${selectedLevel ? `level=${selectedLevel}` : ''}${selectedYear ? `&year=${selectedYear}` : ''}${selectedRegion ? `&region=${selectedRegion}` : ''}`} className="hover:text-blue-900">×</Link>
-                        </span>
-                    )}
-                    {selectedRegion && (
-                        <span className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded border border-teal-100 flex items-center gap-1">
-                            {selectedRegion}
-                            <Link href={`/?${selectedCategory ? `category=${selectedCategory}` : ''}${selectedLevel ? `&level=${selectedLevel}` : ''}${selectedYear ? `&year=${selectedYear}` : ''}`} className="hover:text-teal-900">×</Link>
-                        </span>
-                    )}
-                    {selectedYear && (
-                        <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-100 flex items-center gap-1">
-                            {selectedYear}年
-                            <Link href={`/?${selectedCategory ? `category=${selectedCategory}` : ''}${selectedLevel ? `&level=${selectedLevel}` : ''}${selectedRegion ? `&region=${selectedRegion}` : ''}`} className="hover:text-green-900">×</Link>
-                        </span>
-                    )}
-                    {selectedStatus && (
-                        <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded border border-orange-100 flex items-center gap-1">
-                            {selectedStatus}
-                            <Link href={`/?${selectedCategory ? `category=${selectedCategory}` : ''}${selectedLevel ? `level=${selectedLevel}` : ''}${selectedYear ? `&year=${selectedYear}` : ''}${selectedRegion ? `&region=${selectedRegion}` : ''}`} className="hover:text-orange-900">×</Link>
-                        </span>
-                    )}
-                    {query && (
-                        <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-100">
-                            搜: {query}
-                        </span>
-                    )}
-                    <Link href="/" className="text-slate-400 hover:text-slate-600 text-xs underline ml-auto">重置所有</Link>
-                </div>
+            {(selectedIndustry || selectedLevel || selectedYear || selectedRegion || selectedStatus || query) && (
+                <FilterStatusBar
+                    selectedLevel={selectedLevel}
+                    selectedIndustry={selectedIndustry}
+                    selectedRegion={selectedRegion}
+                    selectedYear={selectedYear}
+                    selectedStatus={selectedStatus}
+                    query={query}
+                    industryName={industries.find(i => i.id === parseInt(selectedIndustry))?.name}
+                />
             )}
 
             {query && laws.length > 0 && (
@@ -610,7 +736,12 @@ export default async function Home({
             )}
 
             <div className="mt-4 text-center text-sm text-slate-400">
-                显示 {laws.length} 条结果
+                {query
+                  ? `共 ${laws.length} 条结果`
+                  : shouldShowGrouped
+                    ? `共 ${totalCount} 部法规`
+                    : `显示 ${laws.length} 部结果`
+                }
             </div>
         </main>
       </section>

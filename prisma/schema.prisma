@@ -8,6 +8,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// 行业分类表 - 司法部标准，71个一级行业
+model Industry {
+  /// 主键ID - 自增主键
+  id               Int               @id @default(autoincrement())
+  /// 行业编码 - 如 "30" = 市场监督管理
+  code             String            @unique
+  /// 行业名称 - 如 "市场监督管理"
+  name             String
+  /// 父级编码 - null 表示一级行业
+  parentCode       String?
+  /// 排序序号
+  order            Int               @default(0)
+  /// 关联法规（旧的一对多，保留兼容）
+  laws             Law[]
+  /// 关联法规（多对多）
+  lawIndustries    LawIndustry[]
+  /// 关联执法事项
+  enforcementItems EnforcementItem[]
+
+  @@index([parentCode])
+}
+
 /// 法规表 - 存储法规的基本信息和元数据
 model Law {
   /// 主键ID - 自增主键
@@ -27,29 +49,64 @@ model Law {
   /// 时效性 - 如：现行有效、已废止、已被修订、尚未生效等
   status                    String?     @default("现行有效")
   /// 效力位阶 - 如：法律、行政法规、部门规章、地方性法规、地方政府规章、规范性文件等
-  /// 注：经济特区法规和海南自由贸易港法规已整合到"地方性法规" (2026-01-29)
   level                     String      @default("法律")
-  /// 法规类别 - 如：食品安全、药品监管、反垄断等
+  /// 法规类别 - 暂保留，后续由 industryId 替代
   category                  String      @default("综合监管")
-  /// 适用地区 - 如：全国、北京、上海、河北等
+  /// 适用地区 - 如：全国、江苏、北京等
   region                    String?
+  /// 所属行业ID - 关联 Industry 表
+  industryId                Int?
   /// 法规组ID - 用于关联同一法规的不同版本（历史版本）
-  /// 基于标题的MD5哈希值生成，同名的法规会有相同的lawGroupId
-  /// 例如：公司法的2023版和1993版会有相同的lawGroupId
   lawGroupId                String?
   /// 创建时间 - 记录创建时间戳
   createdAt                 DateTime    @default(now())
   /// 更新时间 - 记录最后修改时间戳
   updatedAt                 DateTime    @updatedAt
   articles                  Article[]
-  punishmentBasisViolations Violation[] @relation("PunishmentBasisLaw")
-  violationBasisViolations  Violation[] @relation("ViolationBasisLaw")
+  industry                  Industry?   @relation(fields: [industryId], references: [id])
+  lawIndustries             LawIndustry[]
 
   @@index([title])
   @@index([category])
   @@index([region])
   @@index([status])
   @@index([lawGroupId])
+  @@index([industryId])
+}
+
+/// 执法事项表 - 各省执法事项目录
+model EnforcementItem {
+  /// 主键ID - 自增主键
+  id                 Int       @id @default(autoincrement())
+  /// 序号
+  sequenceNumber     Int
+  /// 执法事项名称
+  name               String
+  /// 执法类别 - 行政许可/行政强制/行政处罚/行政检查 等
+  category           String
+  /// 执法主体（实施层级）
+  enforcementBody    String?
+  /// 承办机构
+  handlingDepartment String?
+  /// 执法依据原文 - 完整文本，用于展示
+  legalBasisText     String?
+  /// 备注
+  remarks            String?
+  /// 省份代码 - 如 "320000" = 江苏
+  province           String
+  /// 所属行业ID
+  industryId         Int?
+  /// 关联行业
+  industry           Industry? @relation(fields: [industryId], references: [id])
+  /// 创建时间
+  createdAt          DateTime  @default(now())
+  /// 更新时间
+  updatedAt          DateTime  @updatedAt
+
+  @@index([category])
+  @@index([province])
+  @@index([industryId])
+  @@index([name])
 }
 
 /// 条表 - 存储法规的"条"，是法规的基本层级
@@ -68,8 +125,6 @@ model Article {
   order                     Int         @default(0)
   law                       Law         @relation(fields: [lawId], references: [id], onDelete: Cascade)
   paragraphs                Paragraph[]
-  punishmentBasisViolations Violation[] @relation("PunishmentBasisArticle")
-  violationBasisViolations  Violation[] @relation("ViolationBasisArticle")
 
   @@index([lawId])
   @@index([title])
@@ -89,8 +144,6 @@ model Paragraph {
   order                     Int         @default(0)
   items                     Item[]
   article                   Article     @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  punishmentBasisViolations Violation[] @relation("PunishmentBasisParagraph")
-  violationBasisViolations  Violation[] @relation("ViolationBasisParagraph")
 
   @@index([articleId])
   @@index([content])
@@ -109,59 +162,27 @@ model Item {
   /// 排序序号 - 用于控制项的显示顺序
   order                     Int         @default(0)
   paragraph                 Paragraph   @relation(fields: [paragraphId], references: [id], onDelete: Cascade)
-  punishmentBasisViolations Violation[] @relation("PunishmentBasisItem")
-  violationBasisViolations  Violation[] @relation("ViolationBasisItem")
 
   @@index([paragraphId])
   @@index([content])
 }
 
-/// 违法行为表 - 存储违法行为及其法律依据
-model Violation {
-  /// 主键ID - 自增主键
-  id                         Int        @id @default(autoincrement())
-  /// 违法行为编码 - 如：A001、B002等（格式：类别字母+3位数字）
-  code                       String?    @unique
-  /// 类别编码 - A-Z，根据法规的category动态生成
-  categoryCode               String?
-  /// 违法行为描述 - 详细描述违法行为的内容
-  description                String
-  /// 违法依据所属法规ID - 外键关联到Law表
-  violationBasisLawId        Int?
-  /// 违法依据所属条款ID - 外键关联到Article表
-  violationBasisArticleId    Int?
-  /// 违法依据所属款ID - 外键关联到Paragraph表（可选）
-  violationBasisParagraphId  Int?
-  /// 违法依据所属项ID - 外键关联到Item表（可选）
-  violationBasisItemId       Int?
-  /// 处罚依据所属法规ID - 外键关联到Law表
-  punishmentBasisLawId       Int?
-  /// 处罚依据所属条款ID - 外键关联到Article表
-  punishmentBasisArticleId   Int?
-  /// 处罚依据所属款ID - 外键关联到Paragraph表（可选）
-  punishmentBasisParagraphId Int?
-  /// 处罚依据所属项ID - 外键关联到Item表（可选）
-  punishmentBasisItemId      Int?
-  /// 裁量标准 - 包含从轻、从重、减轻等情形的完整文本
-  /// 格式示例：【从轻处罚情形】（一）...【从重处罚情形】（一）...
-  sentencingGuidelines       String?
-  /// 处罚建议 - 针对该违法行为的具体处罚措施建议
-  /// 格式示例：责令限期改正、处以XXX元罚款等
-  punishmentSuggestion       String?
-  /// 创建时间 - 记录创建时间戳
-  createdAt                  DateTime   @default(now())
-  /// 更新时间 - 记录最后修改时间戳
-  updatedAt                  DateTime   @updatedAt
-  punishmentBasisItem        Item?      @relation("PunishmentBasisItem", fields: [punishmentBasisItemId], references: [id])
-  punishmentBasisParagraph   Paragraph? @relation("PunishmentBasisParagraph", fields: [punishmentBasisParagraphId], references: [id])
-  punishmentBasisArticle     Article?   @relation("PunishmentBasisArticle", fields: [punishmentBasisArticleId], references: [id])
-  punishmentBasisLaw         Law?       @relation("PunishmentBasisLaw", fields: [punishmentBasisLawId], references: [id])
-  violationBasisItem         Item?      @relation("ViolationBasisItem", fields: [violationBasisItemId], references: [id])
-  violationBasisParagraph    Paragraph? @relation("ViolationBasisParagraph", fields: [violationBasisParagraphId], references: [id])
-  violationBasisArticle      Article?   @relation("ViolationBasisArticle", fields: [violationBasisArticleId], references: [id])
-  violationBasisLaw          Law?       @relation("ViolationBasisLaw", fields: [violationBasisLawId], references: [id])
+/// 法规-行业 多对多关联表
+model LawIndustry {
+  /// 主键ID
+  id         Int      @id @default(autoincrement())
+  /// 法规ID
+  lawId      Int
+  /// 行业ID
+  industryId Int
+  /// 是否为主分类
+  isPrimary  Boolean  @default(false)
+  /// 关联法规
+  law        Law      @relation(fields: [lawId], references: [id], onDelete: Cascade)
+  /// 关联行业
+  industry   Industry @relation(fields: [industryId], references: [id])
 
-  @@index([violationBasisLawId])
-  @@index([punishmentBasisLawId])
-  @@index([categoryCode])
+  @@unique([lawId, industryId])
+  @@index([lawId])
+  @@index([industryId])
 }
