@@ -4,6 +4,50 @@
 
 ---
 
+## [v2.0.0] - 2026-04-06
+
+### 重大变更 (Breaking Changes)
+- **项目改造**：从 market-law-search（市场监管法规随手查）改造为 judicial-law-search（司法领域执法监督法规检索系统）
+- **删除违法行为模块**：移除 Violation 表及所有相关页面、组件、API、脚本（-8363 行代码）
+- **删除 AI 模块**：移除 AI 案例分析和违法行为提取功能
+- **Schema 变更**：新增 Industry、LawIndustry、EnforcementItem 三个表
+
+### 数据治理 (Data Governance)
+- **法规数据扩容**：从 421 部扩展到 6675 部法规
+- **lawGroupId 修复**：使用 `buildLawBaseTitle()` 正确生成法规组ID，修复 6254 部法规的 NULL lawGroupId
+- **施行日期提取**：从法规附则自动提取施行日期，修复 5837 部法规（成功率 93.4%），剩余 417 部需人工补充
+- **区域规范化**：统一 500+ 个不规范区域值，修复"X市城"解析错误，建立省-市层级映射
+- **行业分类**：基于关键词匹配为 6675 部法规自动分类到 71 个行业，4267 部成功匹配（64%），2408 部归入"其他"
+
+### 新增 (Added)
+- **Industry 表**：司法部标准 71 个一级行业分类
+- **LawIndustry 表**：法规-行业多对多关联，支持一部法规关联多个行业
+- **EnforcementItem 表**：执法事项目录模型
+- **区域配置**：`src/lib/region-config.ts`（省市县映射 + `normalizeRegion()` 函数）
+- **行业关键词配置**：`src/lib/industry-keywords.ts`（71 个行业的关键词映射）
+- **法规分组工具**：`src/lib/law-grouping.ts`（`buildLawBaseTitle()` 标题清理 + MD5 哈希）
+- **侧边栏省-市折叠展开**：LawSidebar 和 MobileFilterPanel 支持区域层级浏览
+- **省级法规入口**：区域展开后可单独查看省级法规（与市级法规区分）
+
+### 改进 (Changed)
+- **首页性能优化**：从 2.8MB 降至 391KB（添加 `take: 200`、`select` 排除 preamble、年份统计改用原生 SQL）
+- **LawSidebar 重写**：转为 Client Component，使用 `useState` 管理展开/折叠状态，移除旧"按领域"分类
+- **MobileFilterPanel 更新**：行业标签替代旧领域标签，区域支持省市层级展开
+- **项目元数据更新**：标题、描述等全面更新为司法领域
+- **导入脚本修复**：`prisma/import-json.js` 的 `generateLawGroupId()` 调用正确的标题清理逻辑
+
+### 修复 (Fixed)
+- **Hydration 错误**：修复 `<details open>` 在 Server Component 中导致的客户端不匹配
+- **区域筛选问题**：修复无法单独查看省级法规的问题（新增 `provinceOwnCount` 区分省/市法规）
+- **FilterStatusBar 定义顺序**：修复组件引用在定义之前的错误
+
+### 删除 (Removed)
+- 违法行为相关：`app/violations/`、`app/admin/violations/`、`app/api/ai/`、Violation 数据模型
+- AI 相关：`app/ai/`、AI 提取按钮/模态框组件
+- 旧脚本：30+ 个违法行为相关脚本和文档
+
+---
+
 ## [v1.8.0] - 2026-03-29
 
 ### 新增 (Added)

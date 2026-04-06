@@ -1,8 +1,8 @@
 # 司法领域执法监督法规检索系统 - 项目架构文档
 
 > 📅 创建日期：2026-01-19
-> 📌 项目版本：v1.8.1
-> 🔄 最后更新：2026-01-31
+> 📌 项目版本：v2.0.0
+> 🔄 最后更新：2026-04-06
 
 ---
 
@@ -14,11 +14,12 @@
 
 **核心功能**：
 - ✅ 全文搜索：支持关键词搜索法规标题和正文
-- ✅ 分类筛选：按行业、效力位阶、年份筛选
+- ✅ 分类筛选：按行业、效力位阶、区域、年份、时效性筛选
 - ✅ 法规详情：完整的法规条款展示，支持目录导航
 - ✅ 在线管理：后台管理界面，支持元数据修改和新法规录入
-- 🔲 行业分类：司法部标准 71 个行业（待实现）
-- 🔲 执法事项目录：执法事项 CRUD + Excel 导入（待实现）
+- ✅ 行业分类：司法部标准 71 个行业，多对多关联
+- ✅ 区域层级：省-市折叠展开浏览
+- 🔲 执法事项目录：数据模型已就绪，UI 待实现
 
 ---
 
@@ -63,16 +64,13 @@ judicial-law-search/
 ├── src/                   # 源代码目录
 │   └── lib/               # 核心库文件
 │       ├── db.ts          # 数据库连接模块
-│       ├── category-config.ts  # 统一分类配置（v1.6.4新增）
-│       ├── level-utils.ts      # 效力位阶工具函数（v1.6.4新增）
-│       └── import/        # Excel 导入模块（v1.8.0新增，v1.8.1迁移）
-│           ├── types.ts       # 类型定义
-│           ├── excel-parser.ts # Excel 读写
-│           ├── article-parser.ts # 条款解析
-│           ├── law-matcher.ts   # 法规匹配
-│           └── data-validator.ts # 数据验证
+│       ├── category-config.ts  # 统一分类配置
+│       ├── level-utils.ts      # 效力位阶工具函数
+│       ├── region-config.ts    # 区域配置（省市县映射）(v2.0.0)
+│       ├── industry-keywords.ts # 行业关键词配置 (v2.0.0)
+│       └── law-grouping.ts     # 法规分组工具 (v2.0.0)
 │
-├── laws/                  # 原始法规 JSON 文件（408个）
+├── laws/                  # 原始法规 JSON 文件
 │
 ├── public/                # 静态资源
 │
@@ -95,42 +93,44 @@ judicial-law-search/
 ├── ecosystem.config.js    # PM2 配置文件（v1.8.0新增）
 ├── README.md              # 项目说明
 ├── CLAUDE.md              # AI 配置文件
-└── dev.db                 # SQLite 数据库文件（15 MB，408部法规）
+└── dev.db                 # SQLite 数据库文件（~150 MB，6675部法规）
 ```
 
 ---
 
 ## 🗄️ 数据库结构
 
-### 四层架构
+### 表结构（7 个表）
 
 ```
-Law (法规) → Article (条) → Paragraph (款) → Item (项)
+Industry (行业) ─┬─→ Law (法规) → Article (条) → Paragraph (款) → Item (项)
+                 └─→ EnforcementItem (执法事项)
+
+LawIndustry (法规-行业关联) ← 多对多
 ```
 
-### 表结构
+#### Industry（行业分类表）
+- 司法部标准 71 个行业
+- 关键字段：code, name, parentCode
 
 #### Law（法规表）
 - 存储法规基本信息
-- 关键字段：title, status, level, category, region, lawGroupId
+- 关键字段：title, status, level, region, industryId, lawGroupId
 
-#### Article（条表）
-- 存储法规条款
-- 关键字段：chapter, section, title, order
+#### EnforcementItem（执法事项表）
+- 各省执法事项目录
+- 关键字段：name, category, province, industryId
 
-#### Paragraph（款表）
-- 条的下级，可选
-- 关键字段：number, content, order
+#### Article（条表）→ Paragraph（款表）→ Item（项表）
+- 法规正文的三层结构
 
-#### Item（项表）
-- 款的下级，最小单元
-- 关键字段：number, content, order
+#### LawIndustry（法规-行业关联表）
+- 多对多关联，支持一部法规关联多个行业
 
 ### 数据统计
-- 法规数量：397 部
-- Article：19,710 条
-- Paragraph：28,737 款
-- Item：11,692 项
+- 法规数量：6675 部
+- 行业分类：71 个
+- 法规-行业关联：4267 条
 
 ---
 
@@ -172,16 +172,21 @@ git push
 ## 📊 性能优化策略
 
 **当前状态**：
-- 数据量：397 部法规
-- 性能：优秀（< 50ms 查询）
-- 无需优化
+- 数据量：6675 部法规
+- 性能：良好（首页 253ms，优化后 391KB）
+- 已有索引：title, category, region, status, lawGroupId, industryId
 
-**未来优化时机**：
-- 数据量超过 3,000 部
-- 用户报告性能问题
-- 需要支持并发
+**已完成优化（v2.0.0）**：
+- 首页 `take: 200` 限制默认查询
+- `select` 排除 preamble 大字段
+- 年份统计改用原生 SQL
+- 区域省-市层级聚合
+
+**未来优化方向**：
+- FTS5 全文搜索
+- Redis 缓存（如需支持并发）
 
 ---
 
-**最后更新**: 2026-01-26
+**最后更新**: 2026-04-06
 **维护者**: 项目团队

@@ -1,6 +1,6 @@
 # Project Status: Judicial Law Search (司法领域执法监督法规检索系统)
 
-**Last Updated:** 2026-04-06 (v2.0.0-dev - 从 market-law-search 改造)
+**Last Updated:** 2026-04-06 (v2.0.0)
 **Context:** This document serves as a checkpoint to restore context for development sessions.
 
 ## 1. Project Overview
@@ -17,24 +17,28 @@
 ## 2. Current Implementation Status
 
 ### A. Data Layer
-*   **Schema:**
-    *   `Law` Table: Metadata (title, authority, dates, status, level, category, region, lawGroupId).
-    *   `Article` Table: Structure (chapter, section, article number), linked to `Law`. **Content stored in Paragraph table (v1.6.0).**
-    *   `Paragraph` Table: Optional sub-level under Article (款), can contain introductory text or items.
+*   **Schema (v2.0.0):**
+    *   `Industry` Table: 司法部标准 71 个行业分类（code, name, parentCode）.
+    *   `Law` Table: Metadata (title, authority, dates, status, level, category, region, industryId, lawGroupId).
+    *   `Article` Table: Structure (chapter, section, article number), linked to `Law`. Content stored in Paragraph table.
+    *   `Paragraph` Table: Optional sub-level under Article (款).
     *   `Item` Table: Smallest content unit (项), linked to `Paragraph`.
-    *   **`Violation` Table: 违法行为数据** (v1.7.0). Metadata (code, description), links to Law/Article/Paragraph/Item for violation basis and punishment basis.
+    *   `LawIndustry` Table: 法规-行业多对多关联（lawId, industryId, isPrimary）.
+    *   `EnforcementItem` Table: 执法事项目录（name, category, province, industryId）.
+    *   **已删除**: Violation 表（v2.0.0 移除）.
 *   **Data:**
-    *   Database `dev.db` is populated with **420 laws** (v1.8.0).
-    *   **Violation table**: **1103 violation records** imported via Excel batch import (v1.8.0).
-    *   Source data located in `laws/` (JSON format, renamed from `lawsforgemini/` in v1.4.6).
-    *   **Import Strategy:** `prisma/import-json.js` now performs **SAFE INCREMENTAL IMPORT**. It skips laws that already exist in the DB (by title) to prevent overwriting manual edits.
-*   **Configuration (v1.7.1):**
-    *   `src/lib/category-config.ts`: **Unified configuration** for all category options (LEVEL_ORDER, LEVEL_OPTIONS, CATEGORY_OPTIONS, STATUS_OPTIONS, REGION_OPTIONS).
-    *   All pages import from this single source to eliminate hardcoded duplicates.
-    *   **11 levels** (整合后): 法律、法律解释、有关法律问题和重大问题的决定、行政法规、部门规章、地方性法规、自治条例和单行条例、司法解释、地方政府规章、规范性文件、其他
-    *   **注**: 经济特区法规和海南自由贸易港法规已整合到"地方性法规" (2026-01-29)
-    *   **17 categories**: 综合监管、综合执法、反垄断与反不正当竞争、标准管理、产品质量、价格监管、计量监督、食品安全、网监与合同、特种设备、信用监管、商事登记、医疗器械、消费维权、药品监管、知识产权、广告监管、认证认可
-    *   **4 status values**: 现行有效、已被修改、已废止、尚未生效 (原"尚未施行"已改名)
+    *   Database `dev.db` is populated with **6675 laws** (v2.0.0).
+    *   **71 industries** seeded from judicial department standard.
+    *   **4267 law-industry associations** (64% coverage).
+    *   Source data located in `laws/` (JSON format).
+    *   **Import Strategy:** `prisma/import-json.js` performs **SAFE INCREMENTAL IMPORT**, uses `buildLawBaseTitle()` for correct lawGroupId generation.
+*   **Configuration (v2.0.0):**
+    *   `src/lib/category-config.ts`: Unified configuration for levels, categories, statuses, regions.
+    *   `src/lib/region-config.ts`: Province-city-county mappings (PROVINCES, CITY_TO_PROVINCE, COUNTY_TO_PROVINCE).
+    *   `src/lib/industry-keywords.ts`: Industry keyword matching configuration.
+    *   `src/lib/law-grouping.ts`: Law group ID generation with title normalization.
+    *   **11 levels**: 法律、法律解释、有关法律问题和重大问题的决定、行政法规、部门规章、地方性法规、自治条例和单行条例、司法解释、地方政府规章、规范性文件、其他
+    *   **4 status values**: 现行有效、已被修改、已废止、尚未生效
 
 ### B. Frontend Features
 
@@ -80,25 +84,9 @@
     *   **UI Optimization:** Reordered fields (Full Text → Parse Button → Revision Record) (v1.6.5).
     *   **Redirect after Save:** Auto-redirect to law detail page after update (v1.6.5).
 
-#### 4. Violation Module (`/violations`) (v1.7.0)
-*   **Public Search (`/violations`)**:
-    *   **Search:** Keyword search across violation descriptions.
-    *   **Card Display:** Compact card layout with quick info preview.
-    *   **Detail Link:** Click to view full violation details.
-*   **Violation Detail (`/violations/[id]`)**:
-    *   **Hierarchy Display:** Shows violation basis and punishment basis with full article hierarchy (Law → Article → Paragraph → Item).
-    *   **Formatting:** Proper Chinese numbering conversion and markdown rendering.
-*   **Admin Panel (`/admin/violations`)**:
-    *   **List View:** Table with code, description, basis preview.
-    *   **Create (`/admin/violations/new`)**: Dynamic code generation, cascade selection for law/article/paragraph/item.
-    *   **Edit (`/admin/violations/[id]/edit`)**: Full edit capability with real-time article hierarchy display.
-    *   **Inline Actions:** Edit and delete buttons directly in table.
-*   **Excel Batch Import (v1.8.0)**:
-    *   **Parsing Engine:** `src/lib/import/` modules parse structured format 【法规】...【条款项】...【内容】.
-    *   **Smart Matching:** 3-tier matching algorithm (exact → normalized → fuzzy) with 85% improvement.
-    *   **Validation:** Classifies data into importable, missing laws, unmatched articles.
-    *   **Success Rate:** 1103/1201 records imported (91.9% success rate).
-    *   **Tools:** `scripts/parse-violation-excel.ts`, `scripts/import-violations.ts`.
+#### 4. Enforcement Items (`/enforcement`) (v2.0.0)
+*   执法事项目录管理（待完善）
+*   数据模型已就绪（EnforcementItem 表）
 
 ## 3. Key File Structure
 *   **Configuration** (v1.6.4):
@@ -136,8 +124,8 @@
     *   `scripts/import-drug-violations.ts` - **Drug Import**: Import drug-related violations (v1.8.0).
 
 ## 4. Pending / Next Steps
-*   **Data Quality:** Current 420 laws. Quality issues addressed in v1.6.4 (category merging, level classification, title fixes).
-*   **Performance Optimization:** Currently 420 laws, server-side pagination added in v1.8.0. See Section 6 for strategy.
+*   **Data Quality:** 6675 laws. Data governance completed in v2.0.0 (lawGroupId, effectiveDate, regions, industry classification).
+*   **Performance Optimization:** 6675 laws, homepage optimized (take:200, select exclusion, raw SQL). See Section 6 for strategy.
 *   **Full Text Editing:** ✅ Supported in Admin (v1.3).
 *   **Law History Tracking:** ✅ Implemented with lawGroupId (v1.4).
 *   **Hierarchical Structure:** ✅ Implemented Article-Paragraph-Item structure (v1.5.0).
@@ -155,17 +143,13 @@
 *   **Auto Region Detection:** ✅ Automatically detect region from law title during creation/editing (v1.6.5).
 *   **Export Enhancement:** ✅ Complete structured JSON export with all fields (section, items, metadata) (v1.6.6).
 *   **Import/Export Workflow:** ✅ Comprehensive documentation and scripts for batch operations (v1.6.6).
-*   **Violation Module:** ✅ Full CRUD functionality with hierarchy display (v1.7.0).
-*   **Violation Search:** ✅ Keyword search and card-based display (v1.7.0).
-*   **Excel Batch Import:** ✅ Parse structured Excel files with 91.9% success rate (v1.8.0).
-*   **Smart Law Matching:** ✅ 3-tier matching algorithm with 85% improvement (v1.8.0).
-*   **Local Network Deployment:** ✅ PM2 background running + firewall configuration (v1.8.0).
-*   **Production Environment Fix:** ✅ Fixed Prisma transaction errors in production mode (v1.8.0).
-*   **Admin List Optimization:** ✅ Server-side pagination, toast feedback, sort-preserves-filters, ResizableHeader extraction (v1.8.0).
-*   **Mobile Adaptation:** ✅ MobileFilterPanel, mobile search bar on all pages (v1.8.0).
-*   **Code Quality:** ✅ TypeScript interfaces (LawItem, ViolationStatItem), CSS static file, reduced `any` usage (v1.8.0).
-*   **Testing:** Verify text parser edge cases and mobile responsiveness.
-*   **Deployment:** ✅ Deployed on local network (192.168.1.16:3000).
+*   **Data Governance:** ✅ lawGroupId, effectiveDate, region normalization, industry classification (v2.0.0).
+*   **Homepage Performance:** ✅ Optimized from 2.8MB to 391KB (v2.0.0).
+*   **Sidebar UI:** ✅ Province-city collapsible regions, removed legacy category section (v2.0.0).
+*   **Industry Classification:** ✅ 71 industries seeded, 64% laws classified (v2.0.0).
+*   **Pending:** 417 laws without effectiveDate (need manual input).
+*   **Pending:** 2408 laws in "其他" industry (can refine keywords later).
+*   **Pending:** Enforcement items module UI (data model ready).
 
 ## 5. How to Resume Work
 1.  **Read this file** to understand the scope.
@@ -175,10 +159,10 @@
 ## 6. Performance Optimization Strategy 🚀
 
 ### Current Status
-- **Data Volume:** 420 laws (v1.8.0)
-- **Database:** SQLite (perfect fit for current scale)
-- **Performance:** Excellent (< 50ms for all queries), server-side pagination (v1.8.0)
-- **Categories:** 11 levels, 17 categories (v1.7.0)
+- **Data Volume:** 6675 laws (v2.0.0)
+- **Database:** SQLite (~150MB)
+- **Performance:** Good (homepage 253ms after optimization), server-side pagination
+- **Categories:** 11 levels, 71 industries (v2.0.0)
 
 ### Optimization Strategy: Data First, Optimize Later
 
@@ -213,6 +197,6 @@
 4. **Migration Path** - Prisma makes MySQL migration easy if needed (one-line change)
 
 ### Quick Reference
-- **Current:** 420 laws, no indexes needed
-- **Future:** 6,000 laws, add indexes when stable
+- **Current:** 6675 laws, basic indexes in place (title, category, region, status, lawGroupId, industryId)
+- **Future:** Add FTS5 full-text search if needed
 - **Detailed Guide:** See `docs/OPTIMIZATION.md`
