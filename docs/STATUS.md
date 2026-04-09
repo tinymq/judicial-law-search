@@ -1,6 +1,6 @@
 # Project Status: Judicial Law Search (司法领域执法监督法规检索系统)
 
-**Last Updated:** 2026-04-06 (v2.0.0)
+**Last Updated:** 2026-04-09 (v2.1.0)
 **Context:** This document serves as a checkpoint to restore context for development sessions.
 
 ## 1. Project Overview
@@ -24,10 +24,11 @@
     *   `Paragraph` Table: Optional sub-level under Article (款).
     *   `Item` Table: Smallest content unit (项), linked to `Paragraph`.
     *   `LawIndustry` Table: 法规-行业多对多关联（lawId, industryId, isPrimary）.
-    *   `EnforcementItem` Table: 执法事项目录（name, category, province, industryId）.
+    *   `EnforcementItem` Table: 执法事项目录（name, category, province, legalBasisText, lawId, enforcementLevel, enforcementDomain, code 等）.
     *   **已删除**: Violation 表（v2.0.0 移除）.
 *   **Data:**
-    *   Database `dev.db` is populated with **6675 laws** (v2.0.0).
+    *   Database `dev.db` is populated with **7829 laws** (v2.1.0).
+    *   **1000 条执法事项**，全部已关联法规（v2.1.0）.
     *   **71 industries** seeded from judicial department standard.
     *   **4267 law-industry associations** (64% coverage).
     *   Source data located in `laws/` (JSON format).
