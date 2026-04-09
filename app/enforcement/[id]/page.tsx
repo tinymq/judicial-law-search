@@ -1,0 +1,338 @@
+import Link from 'next/link';
+import SiteHeader from '@/components/SiteHeader';
+import ThemeToggle from '@/components/ThemeToggle';
+import { prisma } from '@/src/lib/db';
+import { notFound } from 'next/navigation';
+import { getCategoryColor, LEVEL_COLORS } from '@/src/lib/enforcement-constants';
+import LinkLawEditor from './LinkLawEditor';
+import type { Metadata } from 'next';
+
+export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const item = await prisma.enforcementItem.findUnique({
+    where: { id: parseInt(id) },
+    select: { name: true },
+  });
+  return { title: item ? `${item.name} - 执法事项` : '执法事项未找到' };
+}
+
+// 从执法依据文本中提取《》内的法规名称
+function extractLawNames(text: string): string[] {
+  const cleaned = text.replace(/\n/g, '');
+  const matches = cleaned.match(/《([^》]+)》/g);
+  if (!matches) return [];
+  const names = new Set<string>();
+  for (const m of matches) {
+    const name = m.slice(1, -1).replace(/\s+/g, '').trim();
+    if (name.length > 3) names.add(name);
+  }
+  return Array.from(names);
+}
+
+// 规范化法规名称用于匹配
+function normalizeLawName(name: string): string {
+  return name
+    .replace(/^中华人民共和国/, '')
+    .replace(/\(\d{4}年?[^)]*\)/, '')
+    .replace(/（\d{4}年?[^）]*）/, '')
+    .replace(/\s+/g, '')
+    .trim();
+}
+
+// 将《》内的法规名渲染为链接（优先匹配到的法规直接跳转，否则搜索）
+function renderLegalBasisText(
+  text: string,
+  lawNameToId: Map<string, number>,
+) {
+  const parts = text.split(/(《[^》]+》)/g);
+  return parts.map((part, i) => {
+    const match = part.match(/^《(.+)》$/);
+    if (match) {
+      const name = match[1].replace(/\s+/g, '').trim();
+      const lawId = lawNameToId.get(name);
+      if (lawId) {
+        return (
+          <Link
+            key={i}
+            href={`/law/${lawId}`}
+            className="text-blue-600 hover:text-blue-800 hover:underline underline-offset-2"
+            title={`查看法规详情`}
+          >
+            {part}
+          </Link>
+        );
+      }
+      return (
+        <Link
+          key={i}
+          href={`/?q=${encodeURIComponent(match[1])}`}
+          className="text-blue-500/70 hover:text-blue-700 hover:underline underline-offset-2"
+          title={`搜索"${match[1]}"`}
+        >
+          {part}
+        </Link>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
+export default async function EnforcementDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const item = await prisma.enforcementItem.findUnique({
+    where: { id: parseInt(id) },
+    include: {
+      law: { select: { id: true, title: true, level: true, issuingAuthority: true, lawGroupId: true, effectiveDate: true } },
+      industry: true,
+    },
+  });
+
+  if (!item) return notFound();
+
+  // 从执法依据中提取所有引用的法规名，查库匹配
+  const citedNames = item.legalBasisText ? extractLawNames(item.legalBasisText) : [];
+  let matchedLaws: { id: number; title: string; level: string | null; issuingAuthority: string | null; lawGroupId: string | null; effectiveDate: Date | null }[] = [];
+  const lawNameToId = new Map<string, number>();
+
+  if (citedNames.length > 0) {
+    // 加载候选法规（含 lawGroupId 和 effectiveDate 用于去重取最新）
+    const dbLaws = await prisma.law.findMany({
+      where: {
+        OR: citedNames.map(name => ({
+          title: { contains: normalizeLawName(name) },
+        })),
+      },
+      select: { id: true, title: true, level: true, issuingAuthority: true, lawGroupId: true, effectiveDate: true },
+    });
+
+    // 对每个引用的法规名进行匹配
+    const seenGroups = new Set<string>(); // 按 lawGroupId 去重，同组只保留最新版
+    for (const cited of citedNames) {
+      const normCited = normalizeLawName(cited);
+      // 找到所有匹配的法规，取最新版
+      const candidates: typeof dbLaws = [];
+      for (const law of dbLaws) {
+        const normTitle = normalizeLawName(law.title);
+        if (normTitle === normCited || normTitle.includes(normCited) || normCited.includes(normTitle)) {
+          candidates.push(law);
+        }
+      }
+      if (candidates.length === 0) continue;
+
+      // 同组取最新（按 effectiveDate 降序）
+      candidates.sort((a, b) => {
+        const da = a.effectiveDate?.getTime() ?? 0;
+        const db = b.effectiveDate?.getTime() ?? 0;
+        return db - da;
+      });
+      const best = candidates[0];
+
+      // 去重：同一 lawGroupId 只展示一次
+      const groupKey = best.lawGroupId || `solo_${best.id}`;
+      if (seenGroups.has(groupKey)) {
+        // 同组已有，仍然建立名称映射（让《》链接能用）
+        lawNameToId.set(cited, best.id);
+        continue;
+      }
+      seenGroups.add(groupKey);
+      matchedLaws.push(best);
+      lawNameToId.set(cited, best.id);
+    }
+  }
+
+  // 确保 lawId 关联的主法规也在列表中（取同组最新版）
+  if (item.law) {
+    const primaryLaw = await prisma.law.findFirst({
+      where: item.law.lawGroupId
+        ? { lawGroupId: item.law.lawGroupId }
+        : { id: item.law.id },
+      select: { id: true, title: true, level: true, issuingAuthority: true, lawGroupId: true, effectiveDate: true },
+      orderBy: { effectiveDate: 'desc' },
+    });
+    if (primaryLaw && !matchedLaws.find(l => l.id === primaryLaw.id)) {
+      // 如果同组旧版在列表中，替换为最新版
+      const oldIdx = matchedLaws.findIndex(l => l.lawGroupId && l.lawGroupId === primaryLaw.lawGroupId);
+      if (oldIdx >= 0) {
+        matchedLaws[oldIdx] = primaryLaw;
+      } else {
+        matchedLaws.unshift(primaryLaw);
+      }
+    }
+  }
+
+  const color = getCategoryColor(item.category);
+  const levels = item.enforcementLevel?.split(',').filter(Boolean) || [];
+
+  return (
+    <div className="min-h-screen bg-[var(--color-bg-primary,#faf8f5)] font-sans text-slate-900">
+      {/* 顶部导航栏 */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+          <SiteHeader />
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+            <Link href="/" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">
+              法规检索
+            </Link>
+            <Link href="/enforcement" className="text-sm font-semibold text-slate-900 hidden sm:inline">
+              执法事项
+            </Link>
+            <Link href="/enforcement/plan" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">
+              梳理方案
+            </Link>
+            <Link href="/admin/laws" target="_blank" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">
+              后台管理
+            </Link>
+            <ThemeToggle variant="app" className="ml-1 sm:ml-2" />
+          </div>
+        </div>
+      </header>
+
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* 返回链接 */}
+        <Link
+          href="/enforcement"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 mb-6 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          返回执法事项目录
+        </Link>
+
+        {/* 标题区 */}
+        <div className="mb-6">
+          <div className="flex items-start gap-3 mb-3">
+            <span className={`inline-flex items-center gap-1.5 shrink-0 mt-1 px-2.5 py-1 rounded text-sm font-medium border ${color.bg} ${color.text} ${color.border}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${color.dot}`} />
+              {item.category}
+            </span>
+            {item.itemStatus && (
+              <span className={`shrink-0 mt-1.5 px-2 py-0.5 rounded text-xs font-medium ${
+                item.itemStatus === '生效' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {item.itemStatus}
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-snug">
+            {item.name}
+          </h1>
+        </div>
+
+        {/* 元数据卡片 */}
+        <div className="bg-white rounded-xl border border-slate-200/60 p-5 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+            {item.enforcementDomain && (
+              <div>
+                <dt className="text-sm text-slate-400">执法领域</dt>
+                <dd className="text-base text-slate-800 mt-0.5">{item.enforcementDomain}</dd>
+              </div>
+            )}
+            {item.enforcementBody && (
+              <div>
+                <dt className="text-sm text-slate-400">执法主体</dt>
+                <dd className="text-base text-slate-800 mt-0.5">{item.enforcementBody}</dd>
+              </div>
+            )}
+            {levels.length > 0 && (
+              <div>
+                <dt className="text-sm text-slate-400">行使层级</dt>
+                <dd className="flex gap-1.5 mt-1">
+                  {levels.map(level => (
+                    <span
+                      key={level}
+                      className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[level] || 'bg-slate-100 text-slate-500'}`}
+                    >
+                      {level}
+                    </span>
+                  ))}
+                </dd>
+              </div>
+            )}
+            {item.code && (
+              <div>
+                <dt className="text-sm text-slate-400">事项编码</dt>
+                <dd className="text-base text-slate-800 mt-0.5 font-mono text-sm">{item.code}</dd>
+              </div>
+            )}
+            {item.industry && (
+              <div>
+                <dt className="text-sm text-slate-400">所属行业</dt>
+                <dd className="text-base text-slate-800 mt-0.5">{item.industry.name}</dd>
+              </div>
+            )}
+            {item.handlingDepartment && (
+              <div>
+                <dt className="text-sm text-slate-400">承办机构</dt>
+                <dd className="text-base text-slate-800 mt-0.5">{item.handlingDepartment}</dd>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 执法依据 — 核心区域 */}
+        {item.legalBasisText && (
+          <div className="bg-white rounded-xl border border-slate-200/60 p-5 mb-4">
+            <h2 className="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              执法依据
+            </h2>
+            <div className="text-base text-slate-700 leading-relaxed whitespace-pre-wrap">
+              {renderLegalBasisText(item.legalBasisText, lawNameToId)}
+            </div>
+          </div>
+        )}
+
+        {/* 关联法规（含手动修改入口） */}
+        <LinkLawEditor
+          enforcementItemId={item.id}
+          linkedLaws={matchedLaws.map(l => ({ id: l.id, title: l.title, level: l.level, issuingAuthority: l.issuingAuthority }))}
+          primaryLawId={item.lawId}
+        />
+
+        {/* 检查详情 */}
+        {(item.checkTarget || item.checkContent || item.checkMethod) && (
+          <div className="bg-white rounded-xl border border-slate-200/60 p-5 mb-4">
+            <h2 className="text-lg font-semibold text-slate-800 mb-3">检查详情</h2>
+            <div className="space-y-3">
+              {item.checkTarget && (
+                <div>
+                  <dt className="text-sm text-slate-400">检查对象</dt>
+                  <dd className="text-base text-slate-800 mt-0.5">{item.checkTarget}</dd>
+                </div>
+              )}
+              {item.checkContent && (
+                <div>
+                  <dt className="text-sm text-slate-400">检查内容</dt>
+                  <dd className="text-base text-slate-800 mt-0.5 whitespace-pre-wrap">{item.checkContent}</dd>
+                </div>
+              )}
+              {item.checkMethod && (
+                <div>
+                  <dt className="text-sm text-slate-400">检查方式</dt>
+                  <dd className="text-base text-slate-800 mt-0.5">{item.checkMethod}</dd>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 备注 */}
+        {item.remarks && (
+          <div className="bg-slate-50 rounded-xl border border-slate-200/60 p-5 mb-4">
+            <h2 className="text-sm font-medium text-slate-400 mb-2">备注</h2>
+            <div className="text-base text-slate-600 whitespace-pre-wrap">{item.remarks}</div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

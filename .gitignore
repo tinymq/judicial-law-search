@@ -94,8 +94,13 @@ scripts/backups/*.backup
 # Database files (local only)
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 *.db.backup
 *-backup*.json
 dev.db.restored
 prisma/dev.db.restored
+
+# exports
+/exports/
 

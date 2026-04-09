@@ -37,6 +37,11 @@ export const CATEGORY_PREFIXES: Record<string, string> = {
   '行政处罚': 'XZCF',
   '行政许可': 'XZXK',
   '行政强制': 'XZQZ',
+  '行政调解': 'XZTJ',
+  '行政裁决': 'XZCJ',
+  '行政确认': 'XZQR',
+  '行政奖励': 'XZJL',
+  '其他执法事项': 'QTSX',
 };
 
 // ============================================================
