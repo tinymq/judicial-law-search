@@ -247,7 +247,7 @@ export default function CreateLawPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 font-sans">
+    <div className="min-h-screen bg-slate-50 p-6 pb-28 font-sans">
       <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
         <div className="border-b border-slate-100 px-8 py-5 flex justify-between items-center bg-slate-50/50">
             <h1 className="text-xl font-bold text-slate-800 tracking-tight">录入新法规</h1>
@@ -500,11 +500,8 @@ export default function CreateLawPage() {
         </div>
 
         <div className="bg-slate-50 flex flex-col h-[800px]">
-            <div className="p-4 border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-10 flex justify-between items-center">
+            <div className="p-4 border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-10">
                 <span className="font-bold text-slate-500 text-sm tracking-tight">预览分条 ({previewArticles.length})</span>
-                {previewArticles.length > 0 && (
-                    <button onClick={handleSubmit} disabled={isSubmitting} className="bg-blue-600 text-white px-6 py-1.5 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-md shadow-blue-100 disabled:opacity-50">确认并保存</button>
-                )}
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {previewArticles.map((art, idx) => (
@@ -553,6 +550,30 @@ export default function CreateLawPage() {
             </div>
         </div>
       </div>
+
+      {/* 固定底部操作条（B）：保存按钮常驻可见 */}
+      {previewArticles.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] z-50">
+              <div className="max-w-6xl mx-auto px-8 py-3 flex justify-between items-center gap-4">
+                  <span className="text-sm text-slate-600">
+                      已解析 <b className="text-slate-800">{previewArticles.length}</b> 条
+                      {selectedLaw && (
+                          <span className="ml-3 text-xs text-blue-600">· 将关联到「{selectedLaw.title}」</span>
+                      )}
+                      {hasExplicitNoLink && (
+                          <span className="ml-3 text-xs text-slate-500">· 将生成新的 lawGroupId</span>
+                      )}
+                  </span>
+                  <button
+                      onClick={handleSubmit}
+                      disabled={isSubmitting}
+                      className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-md shadow-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                      {isSubmitting ? '保存中...' : '确认并保存'}
+                  </button>
+              </div>
+          </div>
+      )}
     </div>
   );
 }

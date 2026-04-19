@@ -364,7 +364,7 @@ export default function EditLawClient({ law }: { law: Law }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 font-sans">
+    <div className="min-h-screen bg-slate-50 p-6 pb-32 font-sans">
       <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
         <div className="border-b border-slate-100 px-8 py-5 flex justify-between items-center bg-slate-50/50">
             <h1 className="text-xl font-bold text-slate-800 tracking-tight">编辑法规全文</h1>
@@ -624,51 +624,10 @@ export default function EditLawClient({ law }: { law: Law }) {
         </div>
 
         <div className="bg-slate-50 flex flex-col h-[800px]">
-            <div className="p-4 border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-10 space-y-3">
-                {/* 待保存的法规组操作提示 */}
-                {pendingGroupOperation && (
-                    <div className="bg-yellow-100 border border-yellow-400 rounded-lg p-3">
-                        <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                                <div className="text-xs text-yellow-800 font-medium mb-1">
-                                    ⚠️ 待保存的法规组操作
-                                </div>
-                                <div className="text-xs text-yellow-700">
-                                    {pendingGroupOperation.type === 'independent'
-                                        ? '创建独立组（断开所有关联）'
-                                        : `合并到法规组 ${pendingGroupOperation.targetGroupId}`
-                                    }
-                                    {pendingGroupOperation.targetLawTitle && (
-                                        <div className="mt-1">
-                                          目标法规: {pendingGroupOperation.targetLawTitle}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <button
-                                onClick={handleCancelPendingOperation}
-                                className="text-xs text-red-600 hover:text-red-700 font-medium ml-3"
-                            >
-                                取消
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                <div className="flex justify-between items-center">
-                    <span className="font-bold text-slate-500 text-sm tracking-tight">
-                        预览分条 ({previewArticles.length})
-                    </span>
-                    {previewArticles.length > 0 && (
-                        <button
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            className="bg-blue-600 text-white px-6 py-1.5 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-md shadow-blue-100 disabled:opacity-50"
-                        >
-                            更新并保存
-                        </button>
-                    )}
-                </div>
+            <div className="p-4 border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-10">
+                <span className="font-bold text-slate-500 text-sm tracking-tight">
+                    预览分条 ({previewArticles.length})
+                </span>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {previewArticles.map((art, idx) => (
@@ -717,6 +676,47 @@ export default function EditLawClient({ law }: { law: Law }) {
             </div>
         </div>
       </div>
+
+      {/* 固定底部操作条（B）：保存按钮常驻可见 + 待执行的法规组操作提示 */}
+      {previewArticles.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] z-50">
+              <div className="max-w-6xl mx-auto px-8 py-3 space-y-2">
+                  {pendingGroupOperation && (
+                      <div className="bg-yellow-100 border border-yellow-400 rounded-lg px-3 py-2 flex items-start justify-between">
+                          <div className="flex-1 text-xs text-yellow-800">
+                              <span className="font-medium">⚠️ 待保存的法规组操作：</span>
+                              <span className="ml-1">
+                                  {pendingGroupOperation.type === 'independent'
+                                      ? '创建独立组（断开所有关联）'
+                                      : `合并到法规组 ${pendingGroupOperation.targetGroupId}`}
+                                  {pendingGroupOperation.targetLawTitle && (
+                                      <span className="ml-1">· 目标：{pendingGroupOperation.targetLawTitle}</span>
+                                  )}
+                              </span>
+                          </div>
+                          <button
+                              onClick={handleCancelPendingOperation}
+                              className="text-xs text-red-600 hover:text-red-700 font-medium ml-3 shrink-0"
+                          >
+                              取消
+                          </button>
+                      </div>
+                  )}
+                  <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">
+                          已解析 <b className="text-slate-800">{previewArticles.length}</b> 条
+                      </span>
+                      <button
+                          onClick={handleSubmit}
+                          disabled={isSubmitting}
+                          className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-md shadow-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                          {isSubmitting ? '保存中...' : '更新并保存'}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 }
