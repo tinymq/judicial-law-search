@@ -404,6 +404,20 @@ export default function EditLawClient({ law }: { law: Law }) {
                 <input type="text" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.title} onChange={e => setData({...formData, title: e.target.value})} placeholder="如：中华人民共和国食品安全法" />
             </div>
 
+            {/* 修订记录（元数据，解析正文时会自动回填） */}
+            <div className="bg-yellow-50/50 rounded-lg p-4 border border-yellow-200">
+                <label className="block text-xs font-bold text-yellow-600 uppercase tracking-widest mb-2">修订记录（可选）</label>
+                <textarea
+                    className="w-full h-24 p-3 bg-white border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none font-mono text-xs leading-relaxed resize-none"
+                    placeholder="输入修订记录，如（2xxx年x月xx日xxxx令第xx号公布 根据2xxx年x月xx日...）"
+                    value={formData.preamble || ''}
+                    onChange={e => setData({...formData, preamble: e.target.value})}
+                />
+                <div className="mt-2 text-xs text-yellow-700 bg-yellow-100/50 rounded px-2 py-1">
+                    💡 如果正文开头已含修订记录，解析后会自动填充此字段；否则手动输入
+                </div>
+            </div>
+
             {/* 法规关联管理 */}
             <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-200">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">法规组管理</h3>
@@ -607,19 +621,6 @@ export default function EditLawClient({ law }: { law: Law }) {
             <button onClick={handleParseContent} disabled={isParsing} className="w-full py-3 bg-slate-900 text-white rounded-lg font-bold hover:bg-black transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
               {isParsing ? '解析中...' : '解析文本结构'}
             </button>
-
-            <div className="bg-yellow-50/50 rounded-lg p-4 border border-yellow-200">
-                <label className="block text-xs font-bold text-yellow-600 uppercase tracking-widest mb-2">修订记录（可选 - 放在正文前可解析）</label>
-                <textarea
-                    className="w-full h-24 p-3 bg-white border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none font-mono text-xs leading-relaxed resize-none"
-                    placeholder="输入修订记录，如（2xxx年x月xx日xxxx令第xx号公布 根据2xxx年x月xx日...）"
-                    value={formData.preamble || ''}
-                    onChange={e => setData({...formData, preamble: e.target.value})}
-                />
-                <div className="mt-2 text-xs text-yellow-700 bg-yellow-100/50 rounded px-2 py-1">
-                    💡 提示：粘贴全文时请从修订记录开始，无需复制法规标题
-                </div>
-            </div>
         </div>
 
         <div className="bg-slate-50 flex flex-col h-[800px]">
