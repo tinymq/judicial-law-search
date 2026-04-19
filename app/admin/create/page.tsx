@@ -287,20 +287,6 @@ export default function CreateLawPage() {
                 <input type="text" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.title} onChange={e => setData({...formData, title: e.target.value})} placeholder="如：中华人民共和国食品安全法" />
             </div>
 
-                {/* 修订记录（元数据，解析正文时会自动回填） */}
-                <div className="bg-yellow-50/50 rounded-lg p-4 border border-yellow-200">
-                    <label className="block text-xs font-bold text-yellow-600 uppercase tracking-widest mb-2">修订记录（可选）</label>
-                    <textarea
-                        className="w-full h-24 p-3 bg-white border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none font-mono text-xs leading-relaxed resize-none"
-                        placeholder="输入修订记录，如（2xxx年x月xx日xxxx令第xx号公布 根据2xxx年x月xx日...）"
-                        value={formData.preamble || ''}
-                        onChange={e => setData({...formData, preamble: e.target.value})}
-                    />
-                    <div className="mt-2 text-xs text-yellow-700 bg-yellow-100/50 rounded px-2 py-1">
-                        💡 如果正文开头已含修订记录，解析后会自动填充此字段；否则手动输入
-                    </div>
-                </div>
-
                 {/* 关联现有法规 */}
                 <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-200">
                     <div className="flex items-center justify-between mb-3">
@@ -486,6 +472,20 @@ export default function CreateLawPage() {
                         <select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none" value={formData.region} onChange={e => setData({...formData, region: e.target.value})}>
                             {REGION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
+                    </div>
+                </div>
+
+                {/* 修订记录（元数据，解析正文时会自动回填，紧贴正文便于对照） */}
+                <div className="bg-yellow-50/50 rounded-lg p-4 border border-yellow-200">
+                    <label className="block text-xs font-bold text-yellow-600 uppercase tracking-widest mb-2">修订记录（可选）</label>
+                    <textarea
+                        className="w-full h-24 p-3 bg-white border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none font-mono text-xs leading-relaxed resize-none"
+                        placeholder="输入修订记录，如（2xxx年x月xx日xxxx令第xx号公布 根据2xxx年x月xx日...）"
+                        value={formData.preamble || ''}
+                        onChange={e => setData({...formData, preamble: e.target.value})}
+                    />
+                    <div className="mt-2 text-xs text-yellow-700 bg-yellow-100/50 rounded px-2 py-1">
+                        💡 如果下方正文开头已含修订记录，解析后会自动填充此字段；否则手动输入
                     </div>
                 </div>
 
