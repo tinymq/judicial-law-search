@@ -4,6 +4,44 @@
 
 ---
 
+## [v2.1.2] - 2026-04-24
+
+### 数据治理 (Data Governance)
+- **清理 61 对近重复法规**（触发：7827 部中 122 条记录实为 61 对同版本冗余，典型模式："带年份+有文号+有 preamble" 的完整版 vs "裸 title+无文号+preamble 空" 的粗录版）
+  - 自动重定向 **274 条** EnforcementItem 的 `lawId` 到保留版本
+  - 删除 61 条低质量 Law 记录（Cascade 级联删 articles/paragraphs/items/LawIndustry）
+  - 含 2-gram 相似度 diff 保护（阈值 similarity ≥ 0.9 且长度差 ≤ 0.1），61 对全部通过
+- **补齐 1,145 部 lawGroupId**：1,144 NULL + 1 错误 → 剩余 NULL = 0，总 39 个多版本组正常关联
+- **标题年份标记全量规范化**：7,329 部标题统一为 `(YYYY年修订|修正|公布|修改|发布)` 标准格式
+  - 4 条规范化不规范格式：`(2024修正)` → `(2024年修正)`、`(2025年第二次修正)` → `(2025年修正)`、`（2018年）` → `（2018年公布）`、`（2018年修正文本）` → `（2018年修正）`
+  - 7,325 部追加 `(YYYY年公布)`（年份优先来自公布日期，兜底施行日期）
+  - 状态标记 `(YYYY年废止|失效)` 保留不动
+  - 13 部无任何日期的地方条例跳过（需人工补录）
+- **备份**：执行前全库备份到 `dev.db.backup-260424-pre-dedupe`
+
+### 新增 (Added)
+- **`scripts/governance/scan-near-duplicates.ts`**：按 `buildLawBaseTitle()` 聚类识别近重复，按信息完整度打分推荐保留/删除
+- **`scripts/governance/check-enforcement-refs.ts`**：检查 EnforcementItem 对待删法规的引用，输出 UPDATE SQL 建议
+- **`scripts/governance/scan-year-marker-forms.ts`**：扫描标题年份括号的实际形式分布（标准/状态/缺"年"/带"第X次"/纯年份/其他）
+- **`scripts/governance/delete-near-duplicates.ts`**：两步事务（重定向 EnforcementItem + 删 Law），含 articles 内容 diff 保护
+- **`scripts/governance/fill-year-markers.ts`**：按严格规则规范化年份标记 + 按公布日期补齐无标记的
+
+### 数据规模对比
+
+| 指标 | 治理前 | 治理后 |
+|---|---:|---:|
+| Law 表记录数 | 7,827 | **7,766** |
+| lawGroupId NULL | 1,144 | **0** |
+| 近重复对 | 61 | **0** |
+| 带标准年份标记的标题 | 426 | **7,753**（≈99.8%） |
+| baseTitle 多成员 cluster | 98 | 39 |
+
+### 提交链
+- `c436f76` feat(governance): 新增法规近重复 + 年份标记治理工具
+- 数据层改动由脚本执行，不进 git（dev.db 在 .gitignore）
+
+---
+
 ## [v2.1.1] - 2026-04-20
 
 ### 改进 (Changed)
