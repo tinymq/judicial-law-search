@@ -1,6 +1,6 @@
 # Project Status: Judicial Law Search (司法领域执法监督法规检索系统)
 
-**Last Updated:** 2026-04-09 (v2.1.0)
+**Last Updated:** 2026-04-24 (v2.1.2)
 **Context:** This document serves as a checkpoint to restore context for development sessions.
 
 ## 1. Project Overview
@@ -27,10 +27,11 @@
     *   `EnforcementItem` Table: 执法事项目录（name, category, province, legalBasisText, lawId, enforcementLevel, enforcementDomain, code 等）.
     *   **已删除**: Violation 表（v2.0.0 移除）.
 *   **Data:**
-    *   Database `dev.db` is populated with **7829 laws** (v2.1.0).
-    *   **1000 条执法事项**，全部已关联法规（v2.1.0）.
+    *   Database `dev.db` is populated with **7766 laws** (v2.1.2, 治理前 7827).
+    *   **1000 条执法事项**，全部已关联法规（v2.1.0; v2.1.2 重定向了 274 条到治理后的保留版本）.
     *   **71 industries** seeded from judicial department standard.
     *   **4267 law-industry associations** (64% coverage).
+    *   **Data Quality (v2.1.2):** lawGroupId NULL = 0 (100% 覆盖); 近重复 = 0; 标准年份标记覆盖 99.8%.
     *   Source data located in `laws/` (JSON format).
     *   **Import Strategy:** `prisma/import-json.js` performs **SAFE INCREMENTAL IMPORT**, uses `buildLawBaseTitle()` for correct lawGroupId generation.
 *   **Configuration (v2.0.0):**
@@ -198,6 +199,6 @@
 4. **Migration Path** - Prisma makes MySQL migration easy if needed (one-line change)
 
 ### Quick Reference
-- **Current:** 6675 laws, basic indexes in place (title, category, region, status, lawGroupId, industryId)
+- **Current:** 7766 laws (v2.1.2), basic indexes in place (title, category, region, status, lawGroupId, industryId)
 - **Future:** Add FTS5 full-text search if needed
 - **Detailed Guide:** See `docs/OPTIMIZATION.md`

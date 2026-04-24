@@ -117,12 +117,19 @@ judicial-law-search/
 ├── prisma/                      # 数据库
 │   └── schema.prisma            # 数据Schema
 ├── scripts/                     # 工具脚本（分类存放）
-│   ├── migrations/             # 数据迁移脚本
+│   ├── governance/             # 数据治理脚本（长期保留）
+│   │   ├── scan-near-duplicates.ts       # 只读：识别近重复对
+│   │   ├── check-enforcement-refs.ts     # 只读：查 EnforcementItem 引用
+│   │   ├── scan-year-marker-forms.ts     # 只读：扫年份括号形式分布
+│   │   ├── delete-near-duplicates.ts     # --apply：删近重复 + 重定向 EnforcementItem
+│   │   ├── fill-year-markers.ts          # --apply：规范化 + 补齐年份标记
+│   │   ├── fix-lawgroupid.ts             # --apply：补齐/修正 lawGroupId
+│   │   ├── relink-enforcement-items.ts   # 执法事项 ↔ 法规重新关联
+│   │   └── import-hunan-enforcement.ts   # 湖南执法事项导入
+│   ├── migrations/             # 数据迁移脚本（一次性，保留）
 │   ├── backups/                # 备份脚本和数据
 │   ├── archive/                # 归档的临时脚本
-│   ├── start-server.js         # 服务器启动脚本
-│   ├── start-server.js         # 服务器启动脚本
-│   └── archive/                # 归档的临时脚本
+│   └── start-server.*          # 服务器启动脚本（.js/.cmd/.vbs）
 ├── docs/                        # 项目文档
 │   ├── FILE_INDEX.md            # 本文件（总入口）
 │   ├── CHANGELOG.md             # 版本历史
