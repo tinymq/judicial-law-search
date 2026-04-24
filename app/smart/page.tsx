@@ -1,160 +1,178 @@
-'use client';
+import { prisma } from '@/src/lib/db';
+import { getAllowedRegionValues } from '@/src/lib/region-config';
+import SmartApp from './SmartApp';
+import { convertToLawDetail, shortenLawTitle } from './convert';
+import { SAMPLE_QUERY } from './data';
+import type { MindmapData, HotTag } from './data';
 
-import { useState } from 'react';
-import SmartHeader from './SmartHeader';
-import Mindmap from './Mindmap';
-import LeftPanel from './LeftPanel';
-import RightDetail from './RightDetail';
-import { SAMPLE_QUERY, HOT_TAGS, MINDMAP } from './data';
-import type { HistoryEntry, ViolationEntry, MindNode, MindBranch } from './data';
+export const dynamic = 'force-dynamic';
 
-type Tab = 'history' | 'violations';
+export default async function SmartPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const params = await searchParams;
+  const query = ((params.q ?? SAMPLE_QUERY) || '').trim() || SAMPLE_QUERY;
 
-export default function SmartPage() {
-  const [query, setQuery] = useState(SAMPLE_QUERY);
-  const [mode, setMode] = useState<'smart' | 'basic'>('smart');
-  const [activeTab, setActiveTab] = useState<Tab>('violations');
-  const [activeViolationId, setActiveViolationId] = useState('v1');
-  const [activeArticle, setActiveArticle] = useState('第三十四条');
-  const [selectedMindNode, setSelectedMindNode] = useState('l1');
-
-  const onSubmitSearch = () => {
-    // M0：仅静态数据，搜索提交为 no-op；M1 会接 Prisma 查询
+  const allowedRegions = getAllowedRegionValues();
+  const regionFilter = {
+    OR: [{ region: { in: allowedRegions } }, { region: null }],
   };
 
-  const onPickHistory = (h: HistoryEntry) => {
-    setQuery(h.q);
-  };
+  const lawSelect = {
+    id: true,
+    title: true,
+    level: true,
+    status: true,
+    issuingAuthority: true,
+    documentNumber: true,
+    promulgationDate: true,
+    effectiveDate: true,
+    preamble: true,
+  } as const;
 
-  const onPickViolation = (v: ViolationEntry) => {
-    setActiveViolationId(v.id);
-  };
+  // 1. 标题命中 top-6
+  const titleLaws = await prisma.law.findMany({
+    where: { ...regionFilter, title: { contains: query } },
+    select: lawSelect,
+    take: 6,
+  });
 
-  const onSelectMindNode = (node: MindNode, branch: MindBranch) => {
-    setSelectedMindNode(node.id);
-    if (branch.id === 'violation') {
-      setActiveTab('violations');
-      setActiveViolationId(node.id);
-    } else if (branch.id === 'law') {
-      if (node.label.includes('§34')) setActiveArticle('第三十四条');
-      else if (node.label.includes('§54')) setActiveArticle('第五十四条');
-      else if (node.label.includes('§124')) setActiveArticle('第一百二十四条');
+  // 2. 正文命中 top-6
+  const contentLaws = titleLaws.length >= 4
+    ? []
+    : await prisma.law.findMany({
+        where: {
+          ...regionFilter,
+          id: { notIn: titleLaws.map((l) => l.id) },
+          articles: {
+            some: {
+              paragraphs: {
+                some: { content: { contains: query } },
+              },
+            },
+          },
+        },
+        select: lawSelect,
+        take: 6,
+      });
+
+  const topLaws = [...titleLaws, ...contentLaws].slice(0, 4);
+
+  // 3. 主法规完整详情
+  const primaryId = topLaws[0]?.id;
+  const primaryLawRaw = primaryId
+    ? await prisma.law.findUnique({
+        where: { id: primaryId },
+        include: {
+          articles: {
+            orderBy: { order: 'asc' },
+            include: {
+              paragraphs: {
+                orderBy: { order: 'asc' },
+                include: {
+                  items: { orderBy: { order: 'asc' } },
+                },
+              },
+            },
+          },
+        },
+      })
+    : null;
+
+  const lawDetail = primaryLawRaw ? convertToLawDetail(primaryLawRaw, query) : null;
+
+  // 统计命中条款
+  let articleHitCount = 0;
+  if (lawDetail) {
+    for (const ch of lawDetail.chapters) {
+      for (const sec of ch.sections) {
+        articleHitCount += sec.articles.filter((a) => a.hit).length;
+      }
     }
+  }
+
+  // 4. 热门行业 top-6 作为 HOT_TAGS
+  const industries = await prisma.industry.findMany({
+    where: { laws: { some: regionFilter } },
+    select: {
+      id: true,
+      name: true,
+      _count: { select: { laws: { where: regionFilter } } },
+    },
+    orderBy: { order: 'asc' },
+  });
+  const hotTags: HotTag[] = industries
+    .filter((i) => i._count.laws > 0)
+    .sort((a, b) => b._count.laws - a._count.laws)
+    .slice(0, 6)
+    .map((i) => ({ label: i.name, cat: '行业', count: i._count.laws }));
+
+  // 5. 构造 mindmap 数据：law 分支真数据 + violation/case 继续 mock
+  const mindmapData: MindmapData = {
+    center: {
+      label: query,
+      meta: topLaws.length > 0 ? `${topLaws.length} 部命中 · ${articleHitCount} 条条款` : '无匹配',
+    },
+    branches: [
+      {
+        id: 'violation',
+        name: '违法行为',
+        color: '#c8302b',
+        angleStart: -150,
+        angleEnd: -30,
+        nodes: [
+          { id: 'v1', label: '销售超过保质期食品', weight: 87, cases: 142 },
+          { id: 'v2', label: '经营标签不符合规定的食品', weight: 54, cases: 86 },
+          { id: 'v3', label: '未尽查验义务', weight: 41, cases: 63 },
+          { id: 'v4', label: '未及时下架过期食品', weight: 38, cases: 51 },
+        ],
+      },
+      {
+        id: 'law',
+        name: '法律法规',
+        color: '#b57d28',
+        angleStart: -15,
+        angleEnd: 105,
+        nodes:
+          topLaws.length > 0
+            ? topLaws.map((l, i) => ({
+                id: `l${l.id}`,
+                label: shortenLawTitle(l.title),
+                weight: Math.max(30, 100 - i * 15),
+                cases: i === 0 ? articleHitCount : 0,
+                hot: i === 0,
+              }))
+            : [{ id: 'l-empty', label: '（无命中）', weight: 30, cases: 0 }],
+      },
+      {
+        id: 'case',
+        name: '类案',
+        color: '#4a7a55',
+        angleStart: 120,
+        angleEnd: 210,
+        nodes: [
+          { id: 'c1', label: '(2024) 苏 02 行终 118 号', weight: 32, cases: 1 },
+          { id: 'c2', label: '(2023) 沪 0106 行初 089 号', weight: 28, cases: 1 },
+          { id: 'c3', label: '市监处字〔2024〕037 号', weight: 24, cases: 1 },
+        ],
+      },
+    ],
   };
 
   return (
-    <div data-screen-label="01 法规智能查询" className="min-h-screen">
-      <SmartHeader
-        query={query}
-        setQuery={setQuery}
-        onSubmit={onSubmitSearch}
-        mode={mode}
-        setMode={setMode}
-      />
-
-      {/* Hero with mindmap */}
-      <section className="relative paper-grain">
-        <div className="max-w-[1440px] mx-auto px-6 pt-5 pb-6">
-          {/* Breadcrumb + summary */}
-          <div className="flex items-start justify-between gap-6 mb-3">
-            <div>
-              <div className="mono text-[11px] text-ink-500 mb-1.5 flex items-center gap-1.5">
-                <span>首页</span>
-                <span>›</span>
-                <span>智能查询</span>
-                <span>›</span>
-                <span className="text-zhu">查询结果</span>
-              </div>
-              <h1 className="font-serif text-[28px] font-bold text-ink-900 leading-tight flex items-baseline gap-3 flex-wrap">
-                <span className="text-ink-500 text-[20px] font-normal">查询：</span>
-                <span>&ldquo;{query}&rdquo;</span>
-                <span className="mono text-[13px] text-ink-400 font-normal">
-                  · 命中 3 部法规 · 4 类违法行为 · 3 件类案
-                </span>
-              </h1>
-            </div>
-            <div className="shrink-0 flex items-center gap-2">
-              <button
-                type="button"
-                className="px-3 py-1.5 text-[12px] border border-paper-300 bg-white rounded hover:border-ink-500 text-ink-500"
-              >
-                导出
-              </button>
-              <button
-                type="button"
-                className="px-3 py-1.5 text-[12px] border border-paper-300 bg-white rounded hover:border-ink-500 text-ink-500"
-              >
-                分享
-              </button>
-            </div>
-          </div>
-
-          {/* Hot tags */}
-          <div className="flex items-center gap-2 flex-wrap mb-3">
-            <span className="mono text-[10px] text-ink-400 uppercase tracking-wider">相似查询</span>
-            {HOT_TAGS.slice(0, 5).map((t) => (
-              <button
-                type="button"
-                key={t.label}
-                onClick={() => setQuery(t.label)}
-                className={`px-2.5 py-1 rounded-full text-[11px] border transition-colors ${
-                  query === t.label
-                    ? 'bg-zhu text-white border-zhu'
-                    : 'bg-white text-ink-500 border-paper-300 hover:border-zhu hover:text-zhu'
-                }`}
-              >
-                {t.label}
-                <span className="mono ml-1.5 opacity-60">{t.count}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Mindmap canvas */}
-          <div
-            className="relative bg-white rounded-lg border border-paper-300 card-zhu"
-            style={{ height: 420 }}
-          >
-            <div className="absolute top-3 left-4 z-10 flex items-center gap-1.5 text-[11px] text-ink-500">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="3" />
-                <circle cx="12" cy="12" r="9" strokeDasharray="2 3" />
-              </svg>
-              <span className="font-serif font-bold text-ink-900">知识图谱</span>
-              <span className="mono text-ink-400">/ knowledge graph</span>
-            </div>
-            <Mindmap data={MINDMAP} onSelectNode={onSelectMindNode} selectedId={selectedMindNode} />
-          </div>
-        </div>
-      </section>
-
-      {/* Main split layout */}
-      <section className="max-w-[1440px] mx-auto px-6 pb-8">
-        <div className="flex gap-4" style={{ minHeight: 720 }}>
-          <aside className="shrink-0" style={{ width: 200 }}>
-            <LeftPanel
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              onPickHistory={onPickHistory}
-              onPickViolation={onPickViolation}
-              activeViolationId={activeViolationId}
-            />
-          </aside>
-
-          <main className="flex-1 min-w-0">
-            <RightDetail
-              query={query}
-              activeArticle={activeArticle}
-              setActiveArticle={setActiveArticle}
-            />
-          </main>
-        </div>
-
-        {/* Footer meta */}
-        <div className="mt-4 flex items-center justify-between text-[11px] text-ink-400 mono">
-          <span>Smart Search · Judicial Law Search v2.2 · {new Date().toISOString().slice(0, 10)}</span>
-          <span>数据更新于 2026-04-21 08:00 · 共 18,432 部法规</span>
-        </div>
-      </section>
-    </div>
+    <SmartApp
+      initialQuery={query}
+      hotTags={hotTags}
+      mindmapData={mindmapData}
+      lawDetail={lawDetail}
+      resultMeta={{
+        lawCount: topLaws.length,
+        articleHitCount,
+        violationCount: 4,
+        caseCount: 3,
+      }}
+    />
   );
 }

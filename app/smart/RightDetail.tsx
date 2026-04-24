@@ -1,17 +1,32 @@
 'use client';
 
 import { Fragment, useState } from 'react';
-import { LAW_DETAIL } from './data';
+import type { LawDetail } from './data';
 
 type Props = {
   query: string;
   activeArticle: string;
   setActiveArticle: (a: string) => void;
+  law: LawDetail | null;
 };
 
-export default function RightDetail({ query, activeArticle, setActiveArticle }: Props) {
-  const law = LAW_DETAIL;
+export default function RightDetail({ query, activeArticle, setActiveArticle, law }: Props) {
   const [showCites, setShowCites] = useState(true);
+
+  if (!law) {
+    return (
+      <div className="h-full flex flex-col bg-white border border-paper-300 rounded-lg overflow-hidden card-zhu items-center justify-center">
+        <div className="text-center p-8">
+          <div className="mono text-[11px] text-ink-400 mb-2">NO MATCH</div>
+          <div className="font-serif text-[18px] text-ink-700 mb-2">未找到命中的法规</div>
+          <div className="text-[12px] text-ink-500">
+            试试：「{query}」换个关键词，或切换到
+            <a href="/" className="text-zhu hover:text-zhu-700 underline underline-offset-2 mx-1">常规搜索</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col bg-white border border-paper-300 rounded-lg overflow-hidden card-zhu">
