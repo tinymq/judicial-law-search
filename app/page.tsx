@@ -507,6 +507,13 @@ export default async function Home({
             </form>
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <Link href="/smart" className="text-sm font-semibold text-[#c8302b] hover:text-[#a82723] transition-colors hidden sm:inline-flex items-center gap-1">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="3"/>
+                        <circle cx="12" cy="12" r="9" strokeDasharray="2 3"/>
+                    </svg>
+                    智能查询
+                </Link>
                 <Link href="/enforcement" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">
                     执法事项
                 </Link>

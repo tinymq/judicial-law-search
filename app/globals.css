@@ -56,6 +56,28 @@
   --font-sans: var(--font-body);
   --font-serif: var(--font-display);
   --font-mono: var(--font-mono-custom);
+
+  /* 原型色板注册为 Tailwind utility（bg-paper / text-ink-900 / border-zhu-200 等） */
+  --color-paper: var(--paper);
+  --color-paper-50: var(--paper-50);
+  --color-paper-100: var(--paper-100);
+  --color-paper-200: var(--paper-200);
+  --color-paper-300: var(--paper-300);
+  --color-ink-900: var(--ink-900);
+  --color-ink-700: var(--ink-700);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  --color-ink-300: var(--ink-300);
+  --color-zhu: var(--zhu);
+  --color-zhu-50: var(--zhu-50);
+  --color-zhu-100: var(--zhu-100);
+  --color-zhu-200: var(--zhu-200);
+  --color-zhu-600: var(--zhu-600);
+  --color-zhu-700: var(--zhu-700);
+  --color-zhu-800: var(--zhu-800);
+  --color-ochre: var(--ochre);
+  --color-sage: var(--sage);
+  --color-indigo2: var(--indigo2);
 }
 
 @media (prefers-color-scheme: dark) {
