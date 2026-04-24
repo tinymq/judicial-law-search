@@ -339,3 +339,60 @@
 .app-optimized .hover\:text-blue-600:hover {
   color: #c8302b !important;
 }
+
+/* ========================================================================
+ * M_theme 补位：效力位阶标签的原型完整色板精细化
+ * 参考原型 data.jsx 的效力位阶配色（zhu / ochre / indigo2 / sage）
+ * 仅在 .app-optimized 作用域下生效，legacy 主题保持原色
+ * ======================================================================== */
+
+/* 行政法规标签 → 赭黄 ochre #b57d28 */
+.app-optimized .border-orange-100 {
+  border-color: rgba(181, 125, 40, 0.22) !important;
+}
+.app-optimized .bg-orange-50 {
+  background-color: rgba(181, 125, 40, 0.08) !important;
+}
+.app-optimized .text-orange-600 {
+  color: var(--ochre) !important;
+}
+
+/* 部门规章标签 → 青金 indigo2 #2b4a7a */
+.app-optimized .border-blue-100 {
+  border-color: rgba(43, 74, 122, 0.2) !important;
+}
+.app-optimized .text-blue-600 {
+  color: var(--indigo2) !important;
+}
+
+/* 地方性法规标签 → 莲青 sage #4a7a55 */
+.app-optimized .border-green-100 {
+  border-color: rgba(74, 122, 85, 0.22) !important;
+}
+.app-optimized .bg-green-50 {
+  background-color: rgba(74, 122, 85, 0.08) !important;
+}
+.app-optimized .text-green-600 {
+  color: var(--sage) !important;
+}
+
+/* ========================================================================
+ * M_theme 补位：标题使用 Noto Serif SC serif 字体加强（原有基础上补完整）
+ * ======================================================================== */
+
+.app-optimized h1,
+.app-optimized h2,
+.app-optimized h3,
+.app-optimized h4 {
+  font-family: var(--font-display, 'Noto Serif SC', serif);
+  letter-spacing: 0.01em;
+}
+
+/* ========================================================================
+ * M_theme 补位：朱砂色细节装饰（页面顶部导航下的细边、选中态边框）
+ * ======================================================================== */
+
+/* 搜索框 focus 朱砂光圈 */
+.app-optimized input[type="text"]:focus {
+  box-shadow: 0 0 0 3px rgba(200, 48, 43, 0.12) !important;
+}

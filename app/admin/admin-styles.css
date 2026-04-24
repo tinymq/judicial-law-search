@@ -417,3 +417,26 @@
 .sticky-right-col {
   border-left: 2px solid #e2e8f0;
 }
+
+/* ========================================================================
+ * M_theme 补位：标题 serif 字体强化 + letter-spacing 微调
+ * h4 补齐（原 admin-styles.css 只到 h3）
+ * ======================================================================== */
+
+.admin-optimized h1,
+.admin-optimized h2,
+.admin-optimized h3,
+.admin-optimized h4 {
+  letter-spacing: 0.01em;
+}
+
+.admin-optimized h4 {
+  font-family: var(--font-display, 'Noto Serif SC', serif);
+}
+
+/* 管理后台搜索框 focus 朱砂光圈统一 */
+.admin-optimized input[type="text"]:focus,
+.admin-optimized input[type="search"]:focus,
+.admin-optimized textarea:focus {
+  box-shadow: 0 0 0 3px rgba(200, 48, 43, 0.12) !important;
+}

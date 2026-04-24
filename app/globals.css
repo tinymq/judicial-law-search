@@ -19,6 +19,35 @@
   --font-display: 'Noto Serif SC', serif;
   --font-body: 'Noto Sans SC', sans-serif;
   --font-mono-custom: 'JetBrains Mono', monospace;
+
+  /* ========== 原型完整色板（为 /smart 及 optimized 主题提供） ========== */
+  /* paper 系列 - 宣纸底色 */
+  --paper: #faf8f5;
+  --paper-50: #fdfcfa;
+  --paper-100: #f5f3f0;
+  --paper-200: #efece7;
+  --paper-300: #e8e6e3;
+
+  /* ink 系列 - 墨色文字 */
+  --ink-900: #1a1a1a;
+  --ink-700: #3d3d3d;
+  --ink-500: #6b6b6b;
+  --ink-400: #9b9b9b;
+  --ink-300: #c7c4bf;
+
+  /* zhu 系列 - 朱砂主色 */
+  --zhu: #c8302b;
+  --zhu-50: rgba(200, 48, 43, 0.06);
+  --zhu-100: rgba(200, 48, 43, 0.12);
+  --zhu-200: rgba(200, 48, 43, 0.22);
+  --zhu-600: #c8302b;
+  --zhu-700: #a82723;
+  --zhu-800: #862019;
+
+  /* 辅助色 - 效力位阶标签用 */
+  --ochre: #b57d28;    /* 赭黄 → 行政法规 */
+  --sage: #4a7a55;     /* 莲青 → 地方性法规 */
+  --indigo2: #2b4a7a;  /* 青金 → 部门规章 */
 }
 
 @theme inline {
@@ -51,4 +80,87 @@ body {
 .admin-page h2,
 .admin-page h3 {
   font-family: var(--font-display);
+}
+
+/* ========================================================================
+ * 原型通用样式类 - 供 /smart 路由及 optimized 主题使用
+ * 这些类在 legacy 主题下不会被用到（不污染现有样式）
+ * ======================================================================== */
+
+/* 关键词高亮 - 底部朱砂下划线 */
+.kw {
+  background: linear-gradient(180deg, transparent 55%, var(--zhu-200) 55%);
+  color: var(--zhu-800);
+  font-weight: 600;
+  padding: 0 1px;
+  border-radius: 1px;
+}
+
+/* 命中标记 - 柔和朱砂底 */
+mark.hit {
+  background: rgba(200, 48, 43, 0.14);
+  color: var(--zhu-800);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* 宣纸纹理背景 */
+.paper-grain {
+  background-image:
+    radial-gradient(rgba(26, 26, 26, 0.035) 1px, transparent 1px),
+    radial-gradient(rgba(26, 26, 26, 0.02) 1px, transparent 1px);
+  background-size: 24px 24px, 7px 7px;
+  background-position: 0 0, 3px 3px;
+}
+
+/* 朱砂斜纹（用于 Hero 区、法规头部装饰） */
+.zhu-hatch {
+  background-image: repeating-linear-gradient(135deg, rgba(200, 48, 43, 0.06) 0 1px, transparent 1px 9px);
+}
+
+/* 细滚动条 - 朱砂主题页面用 */
+.scroll-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: #d9d5ce; border-radius: 3px; }
+.scroll-thin::-webkit-scrollbar-thumb:hover { background: #bdb7ae; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+/* 原型卡片阴影 */
+.card-zhu {
+  box-shadow: 0 1px 2px rgba(26, 26, 26, 0.04), 0 1px 0 rgba(26, 26, 26, 0.02);
+}
+.card-hi {
+  box-shadow: 0 1px 2px rgba(26, 26, 26, 0.05), 0 10px 30px -18px rgba(26, 26, 26, 0.18);
+}
+
+/* 条款树（法规详情页命中高亮） */
+.art-tree .art-item { border-left: 2px solid transparent; padding-left: 12px; }
+.art-tree .art-item.active { border-left-color: var(--zhu); background: var(--zhu-50); }
+.art-tree .art-item.has-hit { border-left-color: rgba(200, 48, 43, 0.4); }
+
+/* Tab 下划线滑动 */
+.tab-indicator {
+  transition:
+    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 脉冲环动画（mindmap 选中节点用） */
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.pulse-ring {
+  animation: pulseRing 2.8s cubic-bezier(0.2, 0.7, 0.4, 1) infinite;
+  transform-origin: center;
+}
+
+/* 分隔圆点图案 */
+.dot-sep {
+  background-image: radial-gradient(circle, var(--zhu) 1px, transparent 1.2px);
+  background-size: 8px 8px;
+}
+
+/* JetBrains Mono 字体类 - 用于数字/代号的显示 */
+.mono {
+  font-family: var(--font-mono-custom, 'JetBrains Mono', monospace);
 }
