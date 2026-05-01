@@ -158,7 +158,7 @@ export default async function Home({
   searchParams: Promise<{ q?: string; category?: string; industry?: string; level?: string; year?: string; region?: string; status?: string }>;
 }) {
   const params = await searchParams;
-  const query = params.q ?? '';
+  const query = (params.q ?? '').trim();
   const selectedCategory = params.category ?? '';
   const selectedIndustry = params.industry ?? '';
   const selectedLevel = params.level ?? '';
@@ -411,23 +411,25 @@ export default async function Home({
 
     const titleMatchedIds = new Set(scoredTitleMatches.map((law) => law.id));
 
-    const contentMatchedLaws = await prisma.law.findMany({
+    const contentLawIdRows = await prisma.$queryRawUnsafe<Array<{lawId: bigint}>>(
+      `SELECT DISTINCT a.lawId FROM Paragraph p
+       JOIN Article a ON a.id = p.articleId
+       WHERE p.content LIKE ?
+       LIMIT 200`,
+      `%${query}%`
+    );
+    const contentCandidateIds = contentLawIdRows
+      .map(r => Number(r.lawId))
+      .filter(id => !titleMatchedIds.has(id));
+
+    const contentMatchedLaws = contentCandidateIds.length > 0 ? await prisma.law.findMany({
       where: {
         ...where,
-        id: { notIn: Array.from(titleMatchedIds) },
-        articles: {
-          some: {
-            paragraphs: {
-              some: {
-                content: { contains: query }
-              }
-            }
-          }
-        }
+        id: { in: contentCandidateIds },
       },
       select: selectFields,
       take: 50,
-    });
+    }) : [];
 
     const scoredContentMatches: SearchLaw[] = contentMatchedLaws
       .map((law) => ({

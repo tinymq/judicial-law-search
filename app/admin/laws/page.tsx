@@ -23,7 +23,7 @@ export default async function AdminLawsPage({
   searchParams: Promise<{ q?: string; category?: string; level?: string; year?: string; region?: string; sort?: string; order?: 'asc' | 'desc'; page?: string; pageSize?: string }>;
 }) {
   const params = await searchParams;
-  const query = params.q || '';
+  const query = (params.q || '').trim();
   const selectedCategory = params.category || '';
   const selectedLevel = params.level || '';
   const selectedYear = params.year || '';
@@ -95,23 +95,34 @@ export default async function AdminLawsPage({
   }
 
   if (query) {
-    where.OR = [
-      { title: { contains: query } },
-      {
-        articles: {
-          some: {
-            paragraphs: {
-              some: {
-                OR: [
-                  { content: { contains: query } },
-                  { items: { some: { content: { contains: query } } } }
-                ]
-              }
-            }
-          }
-        }
-      }
-    ];
+    const [titleIdRows, contentIdRows] = await Promise.all([
+      prisma.$queryRawUnsafe<Array<{id: bigint}>>(
+        `SELECT id FROM Law WHERE title LIKE ?`,
+        `%${query}%`
+      ),
+      prisma.$queryRawUnsafe<Array<{lawId: bigint}>>(
+        `SELECT DISTINCT lawId FROM (
+          SELECT a.lawId FROM Paragraph p
+          JOIN Article a ON a.id = p.articleId
+          WHERE p.content LIKE ?
+          UNION
+          SELECT a.lawId FROM Item i
+          JOIN Paragraph p ON p.id = i.paragraphId
+          JOIN Article a ON a.id = p.articleId
+          WHERE i.content LIKE ?
+        )`,
+        `%${query}%`, `%${query}%`
+      ),
+    ]);
+    const matchIds = [...new Set([
+      ...titleIdRows.map(r => Number(r.id)),
+      ...contentIdRows.map(r => Number(r.lawId)),
+    ])];
+    if (matchIds.length > 0) {
+      where.id = { in: matchIds };
+    } else {
+      where.id = { in: [-1] };
+    }
   }
 
   // 6. 查询法规列表（支持排序 + 分页）
