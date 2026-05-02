@@ -75,7 +75,7 @@ export default async function EnforcementPage({
   } else if (selectedScope) {
     const scopeCode = PROVINCE_OPTIONS.find(p => p.label === selectedScope)?.code;
     if (scopeCode) {
-      where.province = scopeCode;
+      andConditions.push({ province: scopeCode });
       andConditions.push({
         OR: [
           {
