@@ -5,6 +5,7 @@ import { createLaw, findRelatedLaws, searchLaws } from '../actions';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { parseQuickInput, parseContent } from '../utils/contentParser';
+import { formatArticleTitle } from '@/src/lib/article-utils';
 import {
   LEVEL_OPTIONS,
   CATEGORY_OPTIONS,
@@ -39,6 +40,8 @@ export default function CreateLawPage() {
     level: '法律',
     category: '综合监管',
     region: '全国',
+    articleFormat: 'standard',
+    modifiesLawIds: '',
     rawContent: ''
   });
 
@@ -102,11 +105,14 @@ export default function CreateLawPage() {
     setIsParsing(true);
 
     try {
-      const { articles, preamble } = parseContent(formData.rawContent);
+      const { articles, preamble, detectedFormat } = parseContent(formData.rawContent);
       setPreview(articles);
-      // 如果解析到序言，填充到表单
-      if (preamble) {
-        setData(prev => ({ ...prev, preamble }));
+      if (preamble || detectedFormat) {
+        setData(prev => ({
+          ...prev,
+          ...(preamble && { preamble }),
+          ...(detectedFormat && { articleFormat: detectedFormat }),
+        }));
       }
     } catch (error) {
       console.error('❌ 解析失败:', error);
@@ -218,7 +224,7 @@ export default function CreateLawPage() {
   }, [formData.title, shouldLinkExisting, hasManualSelection, hasExplicitNoLink]);
 
   const handleSubmit = async () => {
-    if (!formData.title || previewArticles.length === 0) { alert('请填写标题并解析内容'); return; }
+    if (!formData.title) { alert('请填写标题'); return; }
 
     // 如果选择了关联法规，确认是否使用其 groupId
     let lawGroupIdToUse = undefined;
@@ -475,6 +481,20 @@ export default function CreateLawPage() {
                     </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">条款格式</label>
+                        <select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none" value={formData.articleFormat} onChange={e => setData({...formData, articleFormat: e.target.value})}>
+                            <option value="standard">标准（第一条、第二条）</option>
+                            <option value="ordinal">序号（一、二、三）</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">修改的法规 ID（多个用逗号分隔）</label>
+                        <input type="text" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={formData.modifiesLawIds} onChange={e => setData({...formData, modifiesLawIds: e.target.value})} placeholder="如 6818,7001 留空表示非修改决定" />
+                    </div>
+                </div>
+
                 {/* 修订记录（元数据，解析正文时会自动回填，紧贴正文便于对照） */}
                 <div className="bg-yellow-50/50 rounded-lg p-4 border border-yellow-200">
                     <label className="block text-xs font-bold text-yellow-600 uppercase tracking-widest mb-2">修订记录（可选）</label>
@@ -507,7 +527,7 @@ export default function CreateLawPage() {
                 {previewArticles.map((art, idx) => (
                     <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-xs">{art.title}</span>
+                            <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-xs">{formatArticleTitle(art.title, formData.articleFormat === 'ordinal' ? 'ordinal' : 'standard')}</span>
                             {art.chapter && <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{art.chapter}</span>}
                             {art.section && <span className="text-[10px] text-slate-400 font-medium">→ {art.section}</span>}
                         </div>
@@ -552,7 +572,7 @@ export default function CreateLawPage() {
       </div>
 
       {/* 固定底部操作条（B）：保存按钮常驻可见 */}
-      {previewArticles.length > 0 && (
+      {(previewArticles.length > 0 || formData.title.trim()) && (
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] z-50">
               <div className="max-w-6xl mx-auto px-8 py-3 flex justify-between items-center gap-4">
                   <span className="text-sm text-slate-600">

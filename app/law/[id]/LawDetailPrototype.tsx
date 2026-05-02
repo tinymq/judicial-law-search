@@ -2,6 +2,7 @@ import Link from 'next/link';
 import LawHistory from './LawHistory';
 import PrototypeToc from './PrototypeToc';
 import { resolveStatus } from '@/src/lib/category-config';
+import { normalizeArticleTitle, formatArticleTitle } from '@/src/lib/article-utils';
 
 type TocItem = {
   title: string;
@@ -46,7 +47,7 @@ function MetaRow({ label, value }: { label: string; value: string | null | undef
   );
 }
 
-function LawArticles({ articles }: { articles: Array<any> }) {
+function LawArticles({ articles, articleFormat = 'standard' }: { articles: Array<any>; articleFormat?: string }) {
   return (
     <div className="space-y-12">
       {articles.map((article, idx) => {
@@ -74,12 +75,12 @@ function LawArticles({ articles }: { articles: Array<any> }) {
             <div className="flex items-start gap-4">
               <div className="mt-1 flex flex-col items-center">
                 <div className="px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm shadow-inner shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                  {chineseToNumber(article.title.replace('第', '').replace('条', ''))}
+                  {chineseToNumber(normalizeArticleTitle(article.title))}
                 </div>
                 {idx !== articles.length - 1 && <div className="w-0.5 flex-1 bg-slate-50 mt-2"></div>}
               </div>
               <div className="flex-1 pt-1">
-                <h3 className="text-lg font-bold text-slate-800 mb-3">第{article.title}条</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-3">{formatArticleTitle(article.title, articleFormat === 'ordinal' ? 'ordinal' : 'standard')}</h3>
                 {article.paragraphs?.length > 0 && (
                   <div className="space-y-4">
                     {article.paragraphs.map((para: any) => (
@@ -116,10 +117,14 @@ export default function LawDetailPrototype({
   law,
   lawHistory,
   toc,
+  modificationDecisions = [],
+  modifiedLawVersions = [],
 }: {
   law: any;
   lawHistory: any[];
   toc: TocItem[];
+  modificationDecisions?: any[];
+  modifiedLawVersions?: any[];
 }) {
   const normalizedStatus = resolveStatus(law.status, law.effectiveDate);
 
@@ -226,9 +231,14 @@ export default function LawDetailPrototype({
             </div>
           )}
 
-          {lawHistory.length > 0 && (
+          {(lawHistory.length > 0 || modificationDecisions.length > 0 || modifiedLawVersions.length > 0) && (
             <div id="history" className="scroll-mt-24">
-              <LawHistory currentLaw={law} history={lawHistory} />
+              <LawHistory
+                currentLaw={law}
+                history={lawHistory}
+                modificationDecisions={modificationDecisions}
+                modifiedLawVersions={modifiedLawVersions}
+              />
             </div>
           )}
         </section>
@@ -255,7 +265,7 @@ export default function LawDetailPrototype({
               <div className="mb-4 lg:hidden">
                 <PrototypeToc toc={toc} />
               </div>
-              <LawArticles articles={law.articles} />
+              <LawArticles articles={law.articles} articleFormat={law.articleFormat} />
             </div>
           </div>
         </section>

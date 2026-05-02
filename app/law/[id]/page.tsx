@@ -8,6 +8,7 @@ import LawHistory from './LawHistory';
 import TableOfContents from './TableOfContents';
 import type { Metadata } from 'next';
 import { ADMIN_CONFIG } from '@/app/admin/admin-config';
+import { normalizeArticleTitle, formatArticleTitle } from '@/src/lib/article-utils';
 import LawDetailPrototype from './LawDetailPrototype';
 import RecentViewTracker from '@/src/components/RecentViewTracker';
 import { resolveStatus, statusColor } from '@/src/lib/category-config';
@@ -73,22 +74,58 @@ export default async function LawDetail({
   }
 
   // 查询同一法规组的历史版本
+  const lawHistorySelect = {
+    id: true,
+    title: true,
+    effectiveDate: true,
+    promulgationDate: true,
+    status: true,
+  } as const;
+
   const lawHistory = await prisma.law.findMany({
     where: {
       lawGroupId: law.lawGroupId,
-      id: { not: law.id } // 排除当前法规
+      id: { not: law.id }
     },
-    orderBy: {
-      effectiveDate: 'desc'
-    },
-    select: {
-      id: true,
-      title: true,
-      effectiveDate: true,
-      promulgationDate: true,
-      status: true
-    }
+    orderBy: { effectiveDate: 'desc' },
+    select: lawHistorySelect,
   });
+
+  // 查询指向本法（含同组所有版本）的修改决定
+  const groupMemberIds = new Set([law.id, ...lawHistory.map(h => h.id)]);
+  const allWithModifies = await prisma.law.findMany({
+    where: { modifiesLawIds: { not: null } },
+    select: { ...lawHistorySelect, modifiesLawIds: true },
+  });
+  const modificationDecisions = allWithModifies.filter(d => {
+    const ids = (d.modifiesLawIds || '').split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    return ids.some(id => groupMemberIds.has(id));
+  });
+
+  // 如果本法是"决定"，查找被修改法规及其版本组
+  let modifiedLawVersions: typeof lawHistory = [];
+  const modifiesIds = (law.modifiesLawIds || '').split(',').map((s: string) => parseInt(s.trim())).filter((n: number) => !isNaN(n));
+  if (modifiesIds.length > 0) {
+    const targetLaws = await prisma.law.findMany({
+      where: { id: { in: modifiesIds } },
+      select: { lawGroupId: true },
+    });
+    const groupIds = [...new Set(targetLaws.map(t => t.lawGroupId).filter(Boolean))] as string[];
+    if (groupIds.length > 0) {
+      const allVersions = await prisma.law.findMany({
+        where: { lawGroupId: { in: groupIds }, id: { not: law.id } },
+        orderBy: { effectiveDate: 'desc' },
+        select: { ...lawHistorySelect, lawGroupId: true },
+      });
+      // 每个 lawGroup 只保留最新版
+      const seenGroups = new Set<string>();
+      modifiedLawVersions = allVersions.filter(v => {
+        if (seenGroups.has(v.lawGroupId!)) return false;
+        seenGroups.add(v.lawGroupId!);
+        return true;
+      });
+    }
+  }
 
   // 1. 生成目录数据（章-节-条三层结构）
   const toc: { title: string; id: string; level: 'chapter' | 'section' | 'article'; children?: any[] }[] = [];
@@ -134,8 +171,14 @@ export default async function LawDetail({
     }
 
     // 处理条
+    let articleTitle = formatArticleTitle(art.title, 'standard');
+    if (law.articleFormat === 'ordinal') {
+      const firstContent = art.paragraphs[0]?.content || '';
+      const preview = firstContent.length > 25 ? firstContent.substring(0, 25) + '…' : firstContent;
+      articleTitle = `${formatArticleTitle(art.title, 'bare')}、${preview}`;
+    }
     const articleItem = {
-      title: `第${art.title}条`,
+      title: articleTitle,
       id: `article-${art.id}`,
       level: 'article' as const
     };
@@ -275,6 +318,8 @@ export default async function LawDetail({
           law={law}
           lawHistory={lawHistory}
           toc={toc}
+          modificationDecisions={modificationDecisions}
+          modifiedLawVersions={modifiedLawVersions}
         />
         <BackToTopButton />
       </div>
@@ -376,8 +421,13 @@ export default async function LawDetail({
           </header>
 
           {/* 本法变迁 */}
-          {lawHistory.length > 0 && (
-            <LawHistory currentLaw={law} history={lawHistory} />
+          {(lawHistory.length > 0 || modificationDecisions.length > 0 || modifiedLawVersions.length > 0) && (
+            <LawHistory
+              currentLaw={law}
+              history={lawHistory}
+              modificationDecisions={modificationDecisions}
+              modifiedLawVersions={modifiedLawVersions}
+            />
           )}
 
           {/* 4. 正文内容 */}
@@ -422,12 +472,12 @@ export default async function LawDetail({
                    <div className="flex items-start gap-4">
                       <div className="mt-1 flex flex-col items-center">
                           <div className="px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm shadow-inner shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                              {chineseToNumber(article.title.replace('第', '').replace('条', ''))}
+                              {chineseToNumber(normalizeArticleTitle(article.title))}
                           </div>
                           {idx !== law.articles.length - 1 && <div className="w-0.5 flex-1 bg-slate-50 mt-2"></div>}
                       </div>
                       <div className="flex-1 pt-1">
-                          <h3 className="text-lg font-bold text-slate-800 mb-3">第{article.title}条</h3>
+                          <h3 className="text-lg font-bold text-slate-800 mb-3">{formatArticleTitle(article.title, law.articleFormat === 'ordinal' ? 'ordinal' : 'standard')}</h3>
 
                           {/* 款 */}
                           {article.paragraphs && article.paragraphs.length > 0 && (
@@ -465,6 +515,13 @@ export default async function LawDetail({
                 </div>
               );
             })}
+
+            {law.articles.length === 0 && (
+              <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                <p className="text-lg mb-2">该法规内容尚未录入</p>
+                <p className="text-sm">如需查看全文，请通过后台管理导入</p>
+              </div>
+            )}
           </div>
 
         </main>

@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from '@/src/lib/db';
+import { formatArticleTitle } from '@/src/lib/article-utils';
 import { revalidatePath } from 'next/cache';
 import fs from 'fs';
 import path from 'path';
@@ -186,6 +187,8 @@ export async function createLaw(data: any): Promise<number> {
         category: data.category,
         region: data.region || '全国',
         lawGroupId: resolvedGroup.lawGroupId,
+        ...(data.articleFormat !== undefined && { articleFormat: data.articleFormat }),
+        ...(data.modifiesLawIds !== undefined && { modifiesLawIds: data.modifiesLawIds || null }),
       }
     });
 
@@ -381,6 +384,8 @@ export async function updateLawWithArticles(id: number, data: any) {
         category: data.category,
         region: data.region || '全国',
         ...(data.lawGroupId !== undefined && { lawGroupId: data.lawGroupId }),
+        ...(data.articleFormat !== undefined && { articleFormat: data.articleFormat }),
+        ...(data.modifiesLawIds !== undefined && { modifiesLawIds: data.modifiesLawIds || null }),
       }
     });
 
@@ -696,8 +701,8 @@ export async function searchLegalProvisions(keyword: string, lawId?: number) {
       paragraphId: null,
       itemId: null,
       content: contentPreview,
-      displayText: `第${article.title}条`, // 添加"第"和"条"字
-      breadcrumb: `${article.law.title} > 第${article.title}条`,
+      displayText: formatArticleTitle(article.title),
+      breadcrumb: `${article.law.title} > ${formatArticleTitle(article.title)}`,
       // 附加所有Paragraph数据，用于前端显示
       allParagraphs: allParagraphs
     });
@@ -767,8 +772,8 @@ export async function searchLegalProvisions(keyword: string, lawId?: number) {
       paragraphId: para.id,
       itemId: null,
       content: para.content,
-      displayText: `第${para.article.title}条第${cnNum}款`, // 添加"第"和"条"字
-      breadcrumb: `${para.article.law.title} > 第${para.article.title}条 > 第${cnNum}款`,
+      displayText: `${formatArticleTitle(para.article.title)}第${cnNum}款`,
+      breadcrumb: `${para.article.law.title} > ${formatArticleTitle(para.article.title)} > 第${cnNum}款`,
       // 附加所有Paragraph数据，用于前端显示
       allParagraphs: allParagraphs
     });
@@ -856,8 +861,8 @@ export async function searchLegalProvisions(keyword: string, lawId?: number) {
       paragraphId: item.paragraph.id,
       itemId: item.id,
       content: item.content,
-      displayText: `第${item.paragraph.article.title}条第${cnNum}款第${item.number}项`, // 添加"第"和"条"字
-      breadcrumb: `${item.paragraph.article.law.title} > 第${item.paragraph.article.title}条 > 第${cnNum}款 > 第${item.number}项`,
+      displayText: `${formatArticleTitle(item.paragraph.article.title)}第${cnNum}款第${item.number}项`,
+      breadcrumb: `${item.paragraph.article.law.title} > ${formatArticleTitle(item.paragraph.article.title)} > 第${cnNum}款 > 第${item.number}项`,
       // 附加所属Paragraph和所有Paragraph数据，用于前端显示
       parentParagraph: parentParagraph,
       allParagraphs: allParagraphs

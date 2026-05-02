@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { formatArticleTitle } from '@/src/lib/article-utils';
 
 interface Paragraph {
   id: number;
@@ -25,12 +26,14 @@ interface LawArticlePanelProps {
   articles: Article[];
   highlightedArticleId: number | null;
   onArticleClick?: (articleId: number) => void;
+  articleFormat?: string;
 }
 
 export default function LawArticlePanel({
   articles,
   highlightedArticleId,
   onArticleClick,
+  articleFormat = 'standard',
 }: LawArticlePanelProps) {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
@@ -120,7 +123,7 @@ export default function LawArticlePanel({
                     {/* 条款标题 */}
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium text-sm text-blue-600">
-                        第{article.title}条
+                        {formatArticleTitle(article.title, articleFormat === 'ordinal' ? 'ordinal' : 'standard')}
                       </span>
                       {isLiabilityArticle(article) && (
                         <span className="text-xs px-2 py-0.5 bg-red-500 text-white rounded">

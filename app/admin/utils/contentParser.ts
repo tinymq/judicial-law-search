@@ -12,6 +12,7 @@
  */
 
 import { REGION_OPTIONS } from '@/src/lib/category-config';
+import { formatArticleTitle } from '@/src/lib/article-utils';
 
 // ==================== 类型定义 ====================
 
@@ -445,26 +446,43 @@ export const parseQuickInput = (
  * @param rawContent - 原始法规文本
  * @returns 解析后的结果，包含条款数组和序言
  */
-export const parseContent = (rawContent: string): { articles: Article[]; preamble: string } => {
+export const parseContent = (rawContent: string): { articles: Article[]; preamble: string; detectedFormat: 'standard' | 'ordinal' } => {
   console.log('🚀 开始解析法规内容');
   console.log('📊 原始文本行数:', rawContent.split('\n').length);
 
   let preamble = '';
   let text = rawContent;
 
-  // 提取序言（支持中文括号（）和英文括号()）
-  const trimmedStart = rawContent.trimStart();
-  if (trimmedStart.startsWith('（') || trimmedStart.startsWith('(')) {
-    const openBracket = trimmedStart[0];
-    const closeBracket = openBracket === '（' ? '）' : ')';
+  // 格式检测：ordinal（一、二、三）vs standard（第X条）
+  const ordinalArticleRegex = /^\s*([一二三四五六七八九十百]+)、\s*(.*)/;
+  const allLines = rawContent.split('\n');
+  const hasOrdinal = allLines.some(l => ordinalArticleRegex.test(l.trim()));
+  const hasStandard = allLines.some(l => /^\s*\**\s*第[零一二三四五六七八九十百千0-9]+条/.test(l.trim()));
+  const firstOrdinalLine = hasOrdinal ? allLines.findIndex(l => ordinalArticleRegex.test(l.trim())) : Infinity;
+  const firstStandardLine = hasStandard ? allLines.findIndex(l => /^\s*\**\s*第[零一二三四五六七八九十百千0-9]+条/.test(l.trim())) : Infinity;
+  const isOrdinalFormat = hasOrdinal && (!hasStandard || firstOrdinalLine < firstStandardLine);
 
-    const closeIndex = rawContent.indexOf(closeBracket);
-    if (closeIndex !== -1) {
-      preamble = rawContent.substring(0, closeIndex + 1).trim();
-      text = rawContent.substring(closeIndex + 1).trim();
-      console.log('📜 提取到序言:', preamble);
+  if (isOrdinalFormat) {
+    const firstOrdIdx = allLines.findIndex(l => ordinalArticleRegex.test(l.trim()));
+    if (firstOrdIdx > 0) {
+      preamble = allLines.slice(0, firstOrdIdx).join('\n').trim();
+      text = allLines.slice(firstOrdIdx).join('\n');
+    }
+    console.log('📋 检测到 ordinal 格式');
+  } else {
+    const trimmedStart = rawContent.trimStart();
+    if (trimmedStart.startsWith('（') || trimmedStart.startsWith('(')) {
+      const openBracket = trimmedStart[0];
+      const closeBracket = openBracket === '（' ? '）' : ')';
+      const closeIndex = rawContent.indexOf(closeBracket);
+      if (closeIndex !== -1) {
+        preamble = rawContent.substring(0, closeIndex + 1).trim();
+        text = rawContent.substring(closeIndex + 1).trim();
+        console.log('📜 提取到序言:', preamble);
+      }
     }
   }
+
   const lines = text.split('\n');
   const articles: Article[] = [];
 
@@ -543,28 +561,38 @@ export const parseContent = (rawContent: string): { articles: Article[]; preambl
       continue;
     }
 
-    // 匹配条
-    const artMatch = trimLine.match(articleRegex);
+    // 匹配条（standard 或 ordinal，互斥：ordinal 模式下不检查 standard 的"第X条"）
+    let artMatch = null;
+    let articleTitle = '';
+
+    if (isOrdinalFormat) {
+      const ordMatch = trimLine.match(ordinalArticleRegex);
+      if (ordMatch) {
+        artMatch = ordMatch;
+        articleTitle = ordMatch[1];
+      }
+    } else {
+      artMatch = trimLine.match(articleRegex);
+      if (artMatch) {
+        articleTitle = normalizeArticleTitle(artMatch[1]);
+      }
+    }
+
     if (artMatch) {
       if (currentArticle) {
         articles.push(currentArticle);
       }
 
       const firstLineText = artMatch[2] || '';
-      console.log('📝 匹配到条:', artMatch[1], '所属章节:', {
-        chapter: currentChapter || null,
-        section: currentSection || null
-      });
 
-      // 新逻辑：所有条款都使用 paragraphs，不再使用 content
       currentArticle = {
-        title: normalizeArticleTitle(artMatch[1]),  // 标准化为纯数字格式
-        chapter: currentChapter || null,  // ✅ 如果没有章节，使用 null
+        title: articleTitle,
+        chapter: currentChapter || null,
         section: currentSection || null,
-        content: null,  // 始终为 null
+        content: null,
         paragraphs: [] as Paragraph[],
-        _firstLineText: firstLineText,  // 临时存储第一行文本
-        _isTerminology: isTerminologyDefinition(firstLineText)  // 标记是否是术语定义
+        _firstLineText: firstLineText,
+        _isTerminology: isTerminologyDefinition(firstLineText)
       };
       continue;
     }
@@ -715,7 +743,7 @@ export const parseContent = (rawContent: string): { articles: Article[]; preambl
     总条数: articles.length
   });
 
-  return { articles, preamble };
+  return { articles, preamble, detectedFormat: isOrdinalFormat ? 'ordinal' as const : 'standard' as const };
 };
 
 /**
@@ -727,7 +755,7 @@ export const parseContent = (rawContent: string): { articles: Article[]; preambl
  * @param articles - 条款数组
  * @returns 重构后的文本
  */
-export const reconstructText = (articles: Article[]): string => {
+export const reconstructText = (articles: Article[], format: 'standard' | 'ordinal' = 'standard'): string => {
   console.log('🔄 开始重构文本，共', articles.length, '条');
 
   let text = '';
@@ -751,7 +779,7 @@ export const reconstructText = (articles: Article[]): string => {
     }
 
     // 添加条款标题
-    text += '第' + article.title + '条';
+    text += formatArticleTitle(article.title, format === 'ordinal' ? 'ordinal' : 'standard');
 
     // 添加款（所有条款都应该有款）
     if (article.paragraphs && article.paragraphs.length > 0) {
