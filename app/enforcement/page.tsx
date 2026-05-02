@@ -13,11 +13,16 @@ export const metadata: Metadata = {
 };
 
 const PROVINCE_OPTIONS = [
+  { code: '330000', label: '浙江' },
   { code: '430000', label: '湖南' },
   { code: '460000', label: '海南' },
   { code: '370000', label: '山东' },
   { code: '320000', label: '江苏' },
 ];
+
+const PROVINCE_NAMES: Record<string, string> = Object.fromEntries(
+  PROVINCE_OPTIONS.map(p => [p.code, p.label])
+);
 
 // 分页配置
 const PAGE_SIZE = 50;
@@ -25,7 +30,7 @@ const PAGE_SIZE = 50;
 export default async function EnforcementPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; level?: string; linked?: string; view?: string; lawLevel?: string; page?: string }>;
+  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; level?: string; linked?: string; view?: string; lawLevel?: string; scope?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const selectedCategory = params.category ?? '';
@@ -36,11 +41,13 @@ export default async function EnforcementPage({
   const selectedLinked = params.linked ?? '';
   const viewMode = params.view ?? '';
   const selectedLawLevel = params.lawLevel ?? '';
+  const selectedScope = params.scope ?? '';
   const query = params.q ?? '';
   const currentPage = Math.max(1, parseInt(params.page || '1', 10));
 
   // 构建查询条件
   const where: any = {};
+  const andConditions: any[] = [];
   if (selectedCategory) where.category = selectedCategory;
   if (selectedIndustry) where.industryId = parseInt(selectedIndustry);
   if (selectedProvince) where.province = selectedProvince;
@@ -50,9 +57,44 @@ export default async function EnforcementPage({
   if (selectedLinked === 'yes') where.lawId = { not: null };
   if (query) where.name = { contains: query };
 
+  // 适用范围筛选
+  if (selectedScope === '通用') {
+    andConditions.push({
+      OR: [
+        { enforcementLevel: null },
+        { enforcementLevel: { contains: '省级' } },
+        { enforcementLevel: { contains: '各级' } },
+      ],
+    });
+    andConditions.push({
+      OR: [
+        { lawId: null },
+        { law: { is: { level: { notIn: ['地方性法规', '地方政府规章'] } } } },
+      ],
+    });
+  } else if (selectedScope) {
+    const scopeCode = PROVINCE_OPTIONS.find(p => p.label === selectedScope)?.code;
+    if (scopeCode) {
+      if (!selectedProvince) where.province = scopeCode;
+      andConditions.push({
+        OR: [
+          {
+            AND: [
+              { enforcementLevel: { not: null } },
+              { NOT: { enforcementLevel: { contains: '省级' } } },
+              { NOT: { enforcementLevel: { contains: '各级' } } },
+            ],
+          },
+          { law: { is: { level: { in: ['地方性法规', '地方政府规章'] } } } },
+        ],
+      });
+    }
+  }
+  if (andConditions.length > 0) where.AND = andConditions;
+
   const items = await prisma.enforcementItem.findMany({
     where,
-    include: { industry: true, law: { select: { id: true, title: true } } },
+    include: { industry: true, law: { select: { id: true, title: true, level: true } } },
     orderBy: [{ sequenceNumber: 'asc' }],
     skip: (currentPage - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
@@ -62,18 +104,24 @@ export default async function EnforcementPage({
   const allCount = await prisma.enforcementItem.count();
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  // 获取类别统计
+  // 获取类别统计（跟随所有筛选条件，除类别本身）
+  const categoryStatsWhere = { ...where };
+  delete categoryStatsWhere.category;
+
   const categoryStats = await prisma.enforcementItem.groupBy({
     by: ['category'],
     _count: { id: true },
+    ...(Object.keys(categoryStatsWhere).length > 0 ? { where: categoryStatsWhere } : {}),
     orderBy: { _count: { id: 'desc' } },
   });
 
-  // 获取执法领域统计
+  // 获取执法领域统计（跟随所有筛选条件，除领域本身）
+  const domainStatsWhere = { ...where, enforcementDomain: { not: null } };
+
   const domainStats = await prisma.enforcementItem.groupBy({
     by: ['enforcementDomain'],
     _count: { id: true },
-    where: { enforcementDomain: { not: null } },
+    where: domainStatsWhere,
     orderBy: { _count: { id: 'desc' } },
   });
 
@@ -117,6 +165,7 @@ export default async function EnforcementPage({
     if (selectedDomain) p.domain = selectedDomain;
     if (selectedLevel) p.level = selectedLevel;
     if (selectedLinked) p.linked = selectedLinked;
+    if (selectedScope) p.scope = selectedScope;
     if (viewMode) p.view = viewMode;
     if (query) p.q = query;
     Object.assign(p, overrides);
@@ -130,7 +179,7 @@ export default async function EnforcementPage({
   }
 
   // 判断是否有活跃筛选
-  const hasFilters = selectedCategory || selectedIndustry || selectedProvince || selectedDomain || selectedLevel || selectedLinked || query;
+  const hasFilters = selectedCategory || selectedIndustry || selectedProvince || selectedDomain || selectedLevel || selectedLinked || selectedScope || query;
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary,#faf8f5)] font-sans text-slate-900">
@@ -247,12 +296,13 @@ export default async function EnforcementPage({
             {selectedDomain && <input type="hidden" name="domain" value={selectedDomain} />}
             {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
             {selectedLinked && <input type="hidden" name="linked" value={selectedLinked} />}
+            {selectedScope && <input type="hidden" name="scope" value={selectedScope} />}
           </form>
 
           <div className="flex flex-wrap gap-x-6 gap-y-3">
             {/* 省份筛选 */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-slate-400 w-12 shrink-0">省份</span>
+              <span className="text-sm font-medium text-slate-400 w-12 shrink-0">来源</span>
               <div className="flex gap-2 flex-wrap">
                 {PROVINCE_OPTIONS.map(p => {
                   const stat = provinceStats.find(s => s.province === p.code);
@@ -271,6 +321,26 @@ export default async function EnforcementPage({
                     </Link>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* 适用范围筛选 */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-slate-400 w-12 shrink-0">范围</span>
+              <div className="flex gap-2 flex-wrap">
+                {['通用', ...provinceStats.map(s => PROVINCE_NAMES[s.province]).filter(Boolean)].map(scope => (
+                  <Link
+                    key={scope}
+                    href={buildQuery({ scope: selectedScope === scope ? '' : scope })}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      selectedScope === scope
+                        ? 'bg-slate-800 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {scope}
+                  </Link>
+                ))}
               </div>
             </div>
 
@@ -294,25 +364,50 @@ export default async function EnforcementPage({
               </div>
             </div>
 
-            {/* 执法领域筛选 */}
+            {/* 执法领域筛选（默认折叠，展示前两排） */}
             {domainStats.length > 0 && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-slate-400 w-12 shrink-0">领域</span>
-                <div className="flex gap-2 flex-wrap">
-                  {domainStats.map(d => (
-                    <Link
-                      key={d.enforcementDomain}
-                      href={buildQuery({ domain: selectedDomain === d.enforcementDomain! ? '' : d.enforcementDomain! })}
-                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                        selectedDomain === d.enforcementDomain
-                          ? 'bg-slate-800 text-white shadow-sm'
-                          : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {d.enforcementDomain}
-                      <span className="ml-1 opacity-50">{d._count.id}</span>
-                    </Link>
-                  ))}
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">领域</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex gap-2 flex-wrap">
+                    {domainStats.slice(0, 14).map(d => (
+                      <Link
+                        key={d.enforcementDomain}
+                        href={buildQuery({ domain: selectedDomain === d.enforcementDomain! ? '' : d.enforcementDomain! })}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                          selectedDomain === d.enforcementDomain
+                            ? 'bg-slate-800 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {d.enforcementDomain}
+                        <span className="ml-1 opacity-50">{d._count.id}</span>
+                      </Link>
+                    ))}
+                  </div>
+                  {domainStats.length > 14 && (
+                    <details className="mt-2" open={!!selectedDomain && domainStats.slice(14).some(d => d.enforcementDomain === selectedDomain)}>
+                      <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden">
+                        +{domainStats.length - 14} 个领域
+                      </summary>
+                      <div className="flex gap-2 flex-wrap mt-2">
+                        {domainStats.slice(14).map(d => (
+                          <Link
+                            key={d.enforcementDomain}
+                            href={buildQuery({ domain: selectedDomain === d.enforcementDomain! ? '' : d.enforcementDomain! })}
+                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                              selectedDomain === d.enforcementDomain
+                                ? 'bg-slate-800 text-white shadow-sm'
+                                : 'text-slate-600 hover:bg-slate-100'
+                            }`}
+                          >
+                            {d.enforcementDomain}
+                            <span className="ml-1 opacity-50">{d._count.id}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                 </div>
               </div>
             )}
@@ -453,6 +548,12 @@ export default async function EnforcementPage({
               {items.map((item) => {
                 const color = getCategoryColor(item.category);
                 const levels = item.enforcementLevel?.split(',').filter(Boolean) || [];
+                const provinceName = PROVINCE_NAMES[item.province] || item.province;
+                const onlySubProvincial = levels.length > 0 &&
+                  !levels.some(l => ['省级', '各级'].includes(l));
+                const isLocal = onlySubProvincial ||
+                  (item.law && item.law.level && ['地方性法规', '地方政府规章'].includes(item.law.level));
+                const scope = isLocal ? provinceName : '通用';
 
                 return (
                   <div
@@ -485,6 +586,16 @@ export default async function EnforcementPage({
 
                       {/* 第二行：元数据 */}
                       <div className="flex items-center gap-2.5 flex-wrap mt-1">
+                        {/* 来源 & 适用范围 */}
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">
+                          {provinceName}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          scope === '通用' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                        }`}>
+                          {scope}
+                        </span>
+                        <span className="text-slate-200">·</span>
                         {/* 执法领域 */}
                         {item.enforcementDomain && (
                           <span className="text-sm text-slate-500">
