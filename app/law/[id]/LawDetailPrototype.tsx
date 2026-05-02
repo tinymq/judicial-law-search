@@ -157,7 +157,7 @@ export default function LawDetailPrototype({
                   <p className="max-w-3xl text-lg leading-8 text-slate-700">{usageSummary}</p>
                   <div className="mt-7 flex flex-wrap items-center gap-3">
                     <a href="#fulltext" className="inline-flex items-center justify-center rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-blue-700">查看法规全文</a>
-                    <Link href={`/law/${law.id}`} className="text-sm font-semibold text-slate-600 underline-offset-4 transition hover:text-slate-900 hover:underline">返回默认页</Link>
+                    <Link href={`/law/${law.id}`} className="text-sm font-semibold text-slate-600 underline-offset-4 transition hover:text-slate-900 hover:underline">经典版</Link>
                   </div>
                 </div>
 

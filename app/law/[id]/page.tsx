@@ -4,6 +4,7 @@ import SiteHeader from '@/components/SiteHeader';
 import ThemeToggle from '@/components/ThemeToggle';
 import { notFound } from 'next/navigation';
 import BackToTopButton from './BackToTopButton';
+import FeedbackButton from './FeedbackButton';
 import LawHistory from './LawHistory';
 import TableOfContents from './TableOfContents';
 import type { Metadata } from 'next';
@@ -321,6 +322,7 @@ export default async function LawDetail({
           modificationDecisions={modificationDecisions}
           modifiedLawVersions={modifiedLawVersions}
         />
+        <FeedbackButton lawId={law.id} lawTitle={law.title} />
         <BackToTopButton />
       </div>
     );
@@ -341,7 +343,7 @@ export default async function LawDetail({
                   href={`/law/${law.id}?prototype=1`}
                   className="text-xs font-bold px-3 py-1.5 rounded-full border border-blue-200 text-blue-600 hover:bg-blue-50 hidden sm:inline-flex"
                 >
-                  看原型
+                  卡片版
                 </Link>
                 <ThemeToggle />
                 <Link href={`/admin/edit/${law.id}`} className="text-xs sm:text-sm font-bold text-blue-600 border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">修改</Link>
@@ -527,7 +529,8 @@ export default async function LawDetail({
         </main>
       </div>
 
-      {/* 返回顶部按钮 */}
+      {/* 反馈按钮 + 返回顶部 */}
+      <FeedbackButton lawId={law.id} lawTitle={law.title} />
       <BackToTopButton />
     </div>
   );

@@ -58,20 +58,19 @@ export default function ThemeToggle({ className = '' }: ThemeToggleProps) {
     );
   }
 
+  const isOptimized = theme === 'optimized';
+
   return (
     <button
       onClick={toggleTheme}
-      className={`
-        px-3 py-1.5 text-xs rounded-md border transition-all duration-200 font-medium
-        ${theme === 'optimized'
-          ? 'border-red-300 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-400'
-          : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-        }
-        ${className}
-      `}
-      title={theme === 'optimized' ? '切换到默认主题（蓝灰色）' : '切换到朱红主题（米白色）'}
+      className={`px-3 py-1.5 text-xs rounded-md border transition-all duration-200 font-medium ${className}`}
+      style={isOptimized
+        ? { borderColor: '#93c5fd', backgroundColor: '#eff6ff', color: '#2563eb' }
+        : { borderColor: '#fca5a5', backgroundColor: '#fef2f2', color: '#dc2626' }
+      }
+      title={isOptimized ? '切换到素蓝主题' : '切换到朱红主题'}
     >
-      {theme === 'optimized' ? '🔴 朱红' : '🔵 默认'}
+      {isOptimized ? '🔵 素蓝' : '🔴 朱红'}
     </button>
   );
 }

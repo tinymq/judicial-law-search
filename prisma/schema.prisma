@@ -70,6 +70,7 @@ model Law {
   industry                  Industry?   @relation(fields: [industryId], references: [id])
   lawIndustries             LawIndustry[]
   enforcementItems          EnforcementItem[]
+  feedbacks                 LawFeedback[]
 
   @@index([title])
   @@index([category])
@@ -196,6 +197,36 @@ model Item {
 
   @@index([paragraphId])
   @@index([content])
+}
+
+/// 法规反馈表 - 用户对法规内容的问题反馈
+model LawFeedback {
+  /// 主键ID - 自增主键
+  id          Int      @id @default(autoincrement())
+  /// 关联法规ID - 外键关联到Law表
+  lawId       Int
+  /// 法规标题快照 - 冗余存储，法规删除后仍可读
+  lawTitle    String
+  /// 问题类型 - 数据错误/内容缺失/格式问题/条款错误/其他
+  issueType   String   @default("数据错误")
+  /// 问题描述 - 用户填写的详细描述
+  description String
+  /// 联系方式 - 可选，用于后续跟进
+  contact     String?
+  /// 处理状态 - 待处理/处理中/已解决/已忽略
+  status      String   @default("待处理")
+  /// 管理员备注 - 处理结果说明
+  adminNote   String?
+  /// 创建时间
+  createdAt   DateTime @default(now())
+  /// 更新时间
+  updatedAt   DateTime @updatedAt
+  /// 关联法规
+  law         Law      @relation(fields: [lawId], references: [id], onDelete: Cascade)
+
+  @@index([lawId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 /// 法规-行业 多对多关联表

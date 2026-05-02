@@ -81,7 +81,10 @@ export default async function AdminLawsPage({
   `;
   const years = yearRows.map(r => ({ year: r.year, count: Number(r.count) }));
 
-  // 5. 构建查询条件
+  // 5. 待处理反馈计数
+  const pendingFeedbackCount = await prisma.lawFeedback.count({ where: { status: '待处理' } });
+
+  // 6. 构建查询条件
   const where: any = {};
 
   if (selectedCategory) where.category = selectedCategory;
@@ -211,6 +214,17 @@ export default async function AdminLawsPage({
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 <ThemeToggle />
+                <Link
+                    href="/admin/feedback"
+                    className="text-sm font-medium text-amber-600 border border-amber-200 px-3 py-2 rounded-lg hover:bg-amber-50 transition-colors flex items-center gap-1"
+                >
+                    反馈管理
+                    {pendingFeedbackCount > 0 && (
+                      <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                        {pendingFeedbackCount}
+                      </span>
+                    )}
+                </Link>
                 <ExportButton />
                 <Link
                     href="/admin/create"
