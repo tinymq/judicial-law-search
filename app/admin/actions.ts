@@ -189,11 +189,28 @@ export async function createLaw(data: any): Promise<number> {
         lawGroupId: resolvedGroup.lawGroupId,
         ...(data.articleFormat !== undefined && { articleFormat: data.articleFormat }),
         ...(data.modifiesLawIds !== undefined && { modifiesLawIds: data.modifiesLawIds || null }),
+        ...(data.primaryIndustryId && { industryId: data.primaryIndustryId }),
       }
     });
 
     // 保存法规ID
     lawId = law.id;
+
+    // 创建 LawIndustry 关联
+    if (data.primaryIndustryId) {
+      await tx.lawIndustry.create({
+        data: { lawId: law.id, industryId: data.primaryIndustryId, isPrimary: true },
+      });
+    }
+    if (data.secondaryIndustryIds && data.secondaryIndustryIds.length > 0) {
+      await tx.lawIndustry.createMany({
+        data: data.secondaryIndustryIds.map((indId: number) => ({
+          lawId: law.id,
+          industryId: indId,
+          isPrimary: false,
+        })),
+      });
+    }
 
     // 如果新法规有公布日期，将同组其他版本改为"已被修改"
     // 说明：新法规已公布就意味着旧版本即将被替代，无论新法规是否已生效
@@ -386,8 +403,28 @@ export async function updateLawWithArticles(id: number, data: any) {
         ...(data.lawGroupId !== undefined && { lawGroupId: data.lawGroupId }),
         ...(data.articleFormat !== undefined && { articleFormat: data.articleFormat }),
         ...(data.modifiesLawIds !== undefined && { modifiesLawIds: data.modifiesLawIds || null }),
+        ...(data.primaryIndustryId !== undefined && { industryId: data.primaryIndustryId }),
       }
     });
+
+    // 1.5 同步 LawIndustry 关联（如果传了 industry 数据）
+    if (data.primaryIndustryId !== undefined) {
+      await tx.lawIndustry.deleteMany({ where: { lawId: id } });
+      if (data.primaryIndustryId) {
+        await tx.lawIndustry.create({
+          data: { lawId: id, industryId: data.primaryIndustryId, isPrimary: true },
+        });
+      }
+      if (data.secondaryIndustryIds && data.secondaryIndustryIds.length > 0) {
+        await tx.lawIndustry.createMany({
+          data: data.secondaryIndustryIds.map((indId: number) => ({
+            lawId: id,
+            industryId: indId,
+            isPrimary: false,
+          })),
+        });
+      }
+    }
 
     // 2. 删除该法规的所有旧条款（级联删除paragraphs和items）
     await tx.article.deleteMany({
@@ -520,6 +557,54 @@ export async function mergeIntoLawGroup(lawId: number, targetGroupId: string) {
     oldGroupId: law.lawGroupId,
     newGroupId: targetGroupId
   };
+}
+
+/**
+ * 获取行业分类树（一级+二级）
+ */
+export async function getIndustryTree() {
+  const allIndustries = await prisma.industry.findMany({
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      parentCode: true,
+      order: true,
+    },
+    orderBy: { order: 'asc' },
+  });
+
+  const level1 = allIndustries.filter(i => !i.parentCode);
+  const level2Map = new Map<string, typeof allIndustries>();
+  for (const ind of allIndustries) {
+    if (ind.parentCode) {
+      const arr = level2Map.get(ind.parentCode) || [];
+      arr.push(ind);
+      level2Map.set(ind.parentCode, arr);
+    }
+  }
+
+  return level1.map(l1 => ({
+    ...l1,
+    children: level2Map.get(l1.code) || [],
+  }));
+}
+
+/**
+ * 获取法规的行业关联（用于编辑页面回填）
+ */
+export async function getLawIndustries(lawId: number) {
+  const associations = await prisma.lawIndustry.findMany({
+    where: { lawId },
+    select: {
+      industryId: true,
+      isPrimary: true,
+      industry: {
+        select: { id: true, code: true, name: true, parentCode: true },
+      },
+    },
+  });
+  return associations;
 }
 
 /**

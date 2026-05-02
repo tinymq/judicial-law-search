@@ -60,6 +60,8 @@ model Law {
   lawGroupId                String?
   /// 条款显示格式 - 'standard' = 第X条 | 'ordinal' = 一、二、三
   articleFormat             String      @default("standard")
+  /// 领域归属范围 - 'universal' 通用基础法 | 'multi_domain' 多领域法 | 'domain_specific' 领域专属法
+  scope                    String      @default("domain_specific")
   /// 所修改的法规ID列表 - 逗号分隔，如 "6818,7001"
   modifiesLawIds           String?
   /// 创建时间 - 记录创建时间戳

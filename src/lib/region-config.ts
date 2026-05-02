@@ -316,7 +316,7 @@ export function getProvincesForDisplay(): Array<{ code: string; shortName: strin
 
 // === 前台展示的省份白名单 ===
 // 只展示这些省份（及其下属城市/自治县）的法规，全国性法规始终展示
-export const ALLOWED_PROVINCES = ['湖南', '海南', '山东', '江苏'];
+export const ALLOWED_PROVINCES = ['湖南', '海南', '山东', '江苏', '浙江'];
 
 /**
  * 获取白名单内所有合法的 region 值（省份 + 城市 + 自治县）

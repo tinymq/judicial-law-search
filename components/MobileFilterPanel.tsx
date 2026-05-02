@@ -10,11 +10,18 @@ type RegionGroup = {
   children: Array<{ name: string; count: number }>;
 };
 
+type IndustryGroup = {
+  id: number;
+  name: string;
+  _count: number;
+  children: Array<{ id: number; name: string; _count: number }>;
+};
+
 interface MobileFilterPanelProps {
   baseUrl: string;
   totalCount: number;
   levels: Array<{ level: string; _count: { id: number } }>;
-  industries: Array<{ id: number; name: string; _count: number }>;
+  industries: IndustryGroup[];
   regionGroups: RegionGroup[];
   years: Array<{ year: string; count: number }>;
   statuses: Array<{ status: string; _count: { id: number } }>;
@@ -48,6 +55,7 @@ export default function MobileFilterPanel({
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'level' | 'industry' | 'region' | 'year' | 'status'>('level');
   const [expandedProvince, setExpandedProvince] = useState<string | null>(null);
+  const [expandedIndustry, setExpandedIndustry] = useState<number | null>(null);
 
   const hasFilter = selectedIndustry || selectedLevel || selectedYear || selectedRegion || selectedStatus;
   const filterCount = [selectedIndustry, selectedLevel, selectedYear, selectedRegion, selectedStatus].filter(Boolean).length;
@@ -61,7 +69,7 @@ export default function MobileFilterPanel({
 
   const tabs = [
     { key: 'level' as const, label: '位阶', active: !!selectedLevel },
-    { key: 'industry' as const, label: '行业', active: !!selectedIndustry },
+    { key: 'industry' as const, label: '领域', active: !!selectedIndustry },
     { key: 'region' as const, label: '区域', active: !!selectedRegion },
     { key: 'year' as const, label: '年份', active: !!selectedYear },
     { key: 'status' as const, label: '时效', active: !!selectedStatus },
@@ -150,24 +158,75 @@ export default function MobileFilterPanel({
             )}
 
             {activeTab === 'industry' && (
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-1">
                 {industries.map(item => {
-                  const isSelected = selectedIndustry === String(item.id);
-                  const params = { ...currentParams };
-                  if (isSelected) { delete params.industry; } else { params.industry = String(item.id); }
+                  const isL1Selected = selectedIndustry === String(item.id);
+                  const hasChildren = item.children.length > 0;
+                  const isExpanded = expandedIndustry === item.id;
+                  const childSelected = item.children.some(c => selectedIndustry === String(c.id));
+
                   return (
-                    <Link
-                      key={item.id}
-                      href={buildUrl(baseUrl, params)}
-                      onClick={() => setOpen(false)}
-                      className={`px-2.5 py-1 rounded-full text-sm transition-colors ${
-                        isSelected
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {item.name} ({item._count})
-                    </Link>
+                    <div key={item.id}>
+                      <div className="flex items-center gap-1">
+                        {hasChildren ? (
+                          <button
+                            onClick={() => setExpandedIndustry(isExpanded ? null : item.id)}
+                            className="flex-1 flex items-center gap-1 px-2 py-1 rounded text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                          >
+                            <svg className={`w-3 h-3 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                            <span className={isL1Selected || childSelected ? 'text-blue-600 font-medium' : ''}>
+                              {item.name} ({item._count})
+                            </span>
+                          </button>
+                        ) : (
+                          <Link
+                            href={buildUrl(baseUrl, { ...currentParams, industry: isL1Selected ? '' : String(item.id) })}
+                            onClick={() => setOpen(false)}
+                            className={`flex-1 px-2 py-1 rounded text-sm transition-colors ${
+                              isL1Selected
+                                ? 'bg-blue-600 text-white'
+                                : 'text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            {item.name} ({item._count})
+                          </Link>
+                        )}
+                      </div>
+                      {hasChildren && isExpanded && (
+                        <div className="pl-6 flex flex-wrap gap-1 mt-1 mb-2">
+                          <Link
+                            href={buildUrl(baseUrl, { ...currentParams, industry: isL1Selected ? '' : String(item.id) })}
+                            onClick={() => setOpen(false)}
+                            className={`px-2 py-0.5 rounded text-xs transition-colors ${
+                              isL1Selected
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            全部 ({item._count})
+                          </Link>
+                          {item.children.map(child => {
+                            const isChildSelected = selectedIndustry === String(child.id);
+                            return (
+                              <Link
+                                key={child.id}
+                                href={buildUrl(baseUrl, { ...currentParams, industry: isChildSelected ? '' : String(child.id) })}
+                                onClick={() => setOpen(false)}
+                                className={`px-2 py-0.5 rounded text-xs transition-colors ${
+                                  isChildSelected
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                }`}
+                              >
+                                {child.name} ({child._count})
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>

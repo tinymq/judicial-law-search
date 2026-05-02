@@ -10,11 +10,18 @@ type RegionGroup = {
   children: Array<{ name: string; count: number }>;
 };
 
+type IndustryGroup = {
+  id: number;
+  name: string;
+  _count: number;
+  children: Array<{ id: number; name: string; _count: number }>;
+};
+
 interface LawSidebarProps {
   baseUrl: string;
   totalCount: number;
   levels: Array<{ level: string; _count: { id: number } }>;
-  industries?: Array<{ id: number; name: string; _count: number }>;
+  industries?: IndustryGroup[];
   regionGroups: RegionGroup[];
   years: Array<{ year: string; count: number }>;
   statuses?: Array<{ status: string; _count: { id: number } }>;
@@ -39,7 +46,6 @@ export default function LawSidebar({
   selectedRegion = '',
   selectedStatus = '',
 }: LawSidebarProps) {
-  // 管理各分组的展开状态
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     level: true,
     status: true,
@@ -48,14 +54,26 @@ export default function LawSidebar({
     year: false,
   });
 
-  // 管理省份展开状态
   const [expandedProvinces, setExpandedProvinces] = useState<Set<string>>(() => {
-    // 如果当前选中了某个城市，自动展开其所在省份
     const initial = new Set<string>();
     if (selectedRegion) {
       for (const g of regionGroups) {
         if (g.province === selectedRegion || g.children.some(c => c.name === selectedRegion)) {
           initial.add(g.province);
+        }
+      }
+    }
+    return initial;
+  });
+
+  // Industry expand state (for two-level tree)
+  const [expandedIndustries, setExpandedIndustries] = useState<Set<number>>(() => {
+    const initial = new Set<number>();
+    if (selectedIndustry) {
+      const selId = parseInt(selectedIndustry);
+      for (const ind of industries) {
+        if (ind.id === selId || ind.children.some(c => c.id === selId)) {
+          initial.add(ind.id);
         }
       }
     }
@@ -75,7 +93,15 @@ export default function LawSidebar({
     });
   };
 
-  // 构建查询参数的辅助函数
+  const toggleIndustry = (id: number) => {
+    setExpandedIndustries(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const buildQueryString = (params: Record<string, string>) => {
     const filtered = Object.entries(params)
       .filter(([_, value]) => value)
@@ -170,26 +196,80 @@ export default function LawSidebar({
           )}
         </div>
 
-        {/* 行业分类 */}
+        {/* 行业分类 - 两级树 */}
         {industries.length > 0 && (
           <div>
-            <SectionHeader id="industry" label="按行业" />
+            <SectionHeader id="industry" label="按执法领域" />
             {openSections.industry && (
               <div className="space-y-0.5 pl-2 ml-1">
-                {industries.map((ind) => (
-                  <Link
-                    key={ind.id}
-                    href={`${baseUrl}${buildQueryString({ ...baseParams, industry: String(ind.id) })}`}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded text-sm transition-colors ${
-                      selectedIndustry === String(ind.id)
-                        ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-slate-800 hover:bg-blue-50'
-                    }`}
-                  >
-                    <span className="truncate">{ind.name}</span>
-                    <span className="text-xs font-semibold text-slate-600">{ind._count}</span>
-                  </Link>
-                ))}
+                {industries.map((ind) => {
+                  const isSelected = selectedIndustry === String(ind.id);
+                  const isExpanded = expandedIndustries.has(ind.id);
+                  const hasChildren = ind.children.length > 0;
+
+                  if (!hasChildren) {
+                    return (
+                      <Link
+                        key={ind.id}
+                        href={`${baseUrl}${buildQueryString({ ...baseParams, industry: String(ind.id) })}`}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded text-sm transition-colors ${
+                          isSelected
+                            ? 'bg-blue-50 text-blue-700 font-medium'
+                            : 'text-slate-800 hover:bg-blue-50'
+                        }`}
+                      >
+                        <span className="truncate">{ind.name}</span>
+                        <span className="text-xs font-semibold text-slate-600">{ind._count}</span>
+                      </Link>
+                    );
+                  }
+
+                  const childSelected = ind.children.some(c => selectedIndustry === String(c.id));
+
+                  return (
+                    <div key={ind.id}>
+                      <div className="flex items-center">
+                        <button
+                          onClick={() => toggleIndustry(ind.id)}
+                          className="w-5 h-5 flex items-center justify-center shrink-0 text-slate-400"
+                        >
+                          <svg className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M9 18l6-6-6-6"/>
+                          </svg>
+                        </button>
+                        <Link
+                          href={`${baseUrl}${buildQueryString({ ...baseParams, industry: String(ind.id) })}`}
+                          className={`flex-1 flex items-center justify-between px-1 py-1.5 rounded text-sm transition-colors ${
+                            isSelected || childSelected
+                              ? 'text-blue-700 font-medium'
+                              : 'text-slate-800 hover:bg-blue-50'
+                          }`}
+                        >
+                          <span className="truncate">{ind.name}</span>
+                          <span className="text-xs font-semibold text-slate-600">{ind._count}</span>
+                        </Link>
+                      </div>
+                      {isExpanded && (
+                        <div className="pl-6 space-y-0.5 mt-0.5">
+                          {ind.children.map((child) => (
+                            <Link
+                              key={child.id}
+                              href={`${baseUrl}${buildQueryString({ ...baseParams, industry: String(child.id) })}`}
+                              className={`flex items-center justify-between px-2 py-1 rounded text-xs transition-colors ${
+                                selectedIndustry === String(child.id)
+                                  ? 'bg-blue-50 text-blue-700 font-medium'
+                                  : 'text-slate-500 hover:bg-blue-50 hover:text-slate-700'
+                              }`}
+                            >
+                              <span className="truncate">{child.name}</span>
+                              <span className="text-xs text-slate-400">{child._count}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -242,7 +322,6 @@ export default function LawSidebar({
                     </button>
                     {isExpanded && (
                       <div className="pl-6 space-y-0.5 mt-0.5">
-                        {/* 省级法规入口 */}
                         {group.provinceOwnCount > 0 && (
                           <Link
                             href={`${baseUrl}${buildQueryString({ ...baseParams, region: group.province })}`}

@@ -12,6 +12,7 @@ import {
   STATUS_OPTIONS,
   REGION_OPTIONS
 } from '@/src/lib/category-config';
+import IndustryPicker from '@/components/admin/IndustryPicker';
 
 interface Article {
   id: number;
@@ -31,6 +32,12 @@ interface Article {
   }[];
 }
 
+interface LawIndustryAssoc {
+  industryId: number;
+  isPrimary: boolean;
+  industry: { id: number; code: string; name: string; parentCode: string | null };
+}
+
 interface Law {
   id: number;
   title: string;
@@ -43,10 +50,12 @@ interface Law {
   level: string;
   category: string;
   region: string | null;
+  industryId: number | null;
   lawGroupId: string | null;
   articleFormat: string;
   modifiesLawIds: string | null;
   articles: Article[];
+  lawIndustries?: LawIndustryAssoc[];
 }
 
 type LawOption = {
@@ -105,6 +114,17 @@ export default function EditLawClient({ law }: { law: Law }) {
   }[]>([]);
   const [isSubmitting, setSubmitting] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+
+  // Industry picker state (derived from existing LawIndustry data)
+  const [primaryIndustryId, setPrimaryIndustryId] = useState<number | null>(() => {
+    const primary = law.lawIndustries?.find(a => a.isPrimary);
+    return primary?.industryId ?? law.industryId ?? null;
+  });
+  const [secondaryIndustryIds, setSecondaryIndustryIds] = useState<number[]>(() => {
+    return (law.lawIndustries || [])
+      .filter(a => !a.isPrimary)
+      .map(a => a.industryId);
+  });
 
   // 快速解析格式化的法规信息
   const [quickInputText, setQuickInputText] = useState('');
@@ -360,6 +380,8 @@ export default function EditLawClient({ law }: { law: Law }) {
       // 再更新法规内容
       await updateLawWithArticles(law.id, {
         ...formData,
+        primaryIndustryId,
+        secondaryIndustryIds,
         articles: previewArticles.map((a, i) => ({ ...a, order: i + 1 }))
       });
 
@@ -580,7 +602,7 @@ export default function EditLawClient({ law }: { law: Law }) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 gap-4">
                 <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">时效性</label>
                     <select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none" value={formData.status} onChange={e => setData({...formData, status: e.target.value})}>
@@ -594,18 +616,22 @@ export default function EditLawClient({ law }: { law: Law }) {
                     </select>
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">类别</label>
-                    <select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none" value={formData.category} onChange={e => setData({...formData, category: e.target.value})}>
-                        {CATEGORY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                    </select>
-                </div>
-                <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">区域</label>
                     <select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none" value={formData.region} onChange={e => setData({...formData, region: e.target.value})}>
                         {REGION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                 </div>
             </div>
+
+            {/* 执法领域选择器（替代旧的 category 下拉） */}
+            <IndustryPicker
+                primaryIndustryId={primaryIndustryId}
+                secondaryIndustryIds={secondaryIndustryIds}
+                onChange={(primary, secondary) => {
+                    setPrimaryIndustryId(primary);
+                    setSecondaryIndustryIds(secondary);
+                }}
+            />
 
             <div className="grid grid-cols-2 gap-4">
                 <div>

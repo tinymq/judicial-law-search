@@ -20,11 +20,12 @@ export const metadata: Metadata = {
 export default async function AdminLawsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; level?: string; year?: string; region?: string; sort?: string; order?: 'asc' | 'desc'; page?: string; pageSize?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; industry?: string; level?: string; year?: string; region?: string; sort?: string; order?: 'asc' | 'desc'; page?: string; pageSize?: string }>;
 }) {
   const params = await searchParams;
   const query = (params.q || '').trim();
   const selectedCategory = params.category || '';
+  const selectedIndustry = params.industry || '';
   const selectedLevel = params.level || '';
   const selectedYear = params.year || '';
   const selectedRegion = params.region || '';
@@ -51,25 +52,46 @@ export default async function AdminLawsPage({
   // 按法定效力位阶的优先级顺序排序
   sortLevelsByOrder(levels);
 
-  // 2. 获取领域分类统计
-  const categories = await prisma.law.groupBy({
-    by: ['category'],
-    _count: { id: true },
-    orderBy: { category: 'asc' },
+  // 2. 获取行业统计（两级树）
+  const allIndustries = await prisma.industry.findMany({
+    select: { id: true, code: true, name: true, parentCode: true, order: true },
+    orderBy: { order: 'asc' },
   });
-  categories.sort((a, b) => b._count.id - a._count.id);
+  const industryLawCounts = await prisma.lawIndustry.groupBy({
+    by: ['industryId'],
+    _count: { lawId: true },
+  });
+  const countMap = new Map(industryLawCounts.map(r => [r.industryId, r._count.lawId]));
+  const level1Industries = allIndustries.filter(i => !i.parentCode);
+  const level2ByParent = new Map<string, typeof allIndustries>();
+  for (const ind of allIndustries) {
+    if (ind.parentCode) {
+      const arr = level2ByParent.get(ind.parentCode) || [];
+      arr.push(ind);
+      level2ByParent.set(ind.parentCode, arr);
+    }
+  }
+  const industries = level1Industries
+    .map(l1 => {
+      const children = (level2ByParent.get(l1.code) || [])
+        .map(l2 => ({ id: l2.id, name: l2.name, _count: countMap.get(l2.id) || 0 }))
+        .filter(c => c._count > 0);
+      const l1Own = countMap.get(l1.id) || 0;
+      const childrenTotal = children.reduce((s, c) => s + c._count, 0);
+      return { id: l1.id, name: l1.name, _count: l1Own + childrenTotal, children };
+    })
+    .filter(ind => ind._count > 0);
 
   // 3. 获取区域统计
-  const regions = await prisma.law.groupBy({
+  const rawRegions = await prisma.law.groupBy({
     by: ['region'],
     _count: { id: true },
     where: { region: { not: null } },
-    orderBy: { region: 'asc' },
   });
-  regions.sort((a, b) => b._count.id - a._count.id);
-
-  // 类型断言：确保 region 不为 null（已通过 where 过滤）
-  const typedRegions = regions as Array<{ region: string; _count: { id: number } }>;
+  const typedRegions = rawRegions as Array<{ region: string; _count: { id: number } }>;
+  const regionGroups = typedRegions
+    .sort((a, b) => b._count.id - a._count.id)
+    .map(r => ({ province: r.region, totalCount: r._count.id, provinceOwnCount: r._count.id, children: [] as Array<{ name: string; count: number }> }));
 
   // 4. 获取年份统计（SQL 聚合）
   const yearRows = await prisma.$queryRaw<Array<{ year: string; count: number }>>`
@@ -184,7 +206,7 @@ export default async function AdminLawsPage({
     });
   }
 
-  const totalCount = categories.reduce((a, b) => a + b._count.id, 0);
+  const totalCount = await prisma.law.count();
 
   return (
     <div className={`min-h-screen bg-slate-100 font-sans text-slate-900 ${themeClass}`}>
@@ -263,11 +285,11 @@ export default async function AdminLawsPage({
         baseUrl="/admin/laws"
         totalCount={totalCount}
         levels={levels}
-        categories={categories}
-        regions={typedRegions}
+        industries={industries}
+        regionGroups={regionGroups}
         years={years}
         statuses={[]}
-        selectedCategory={selectedCategory}
+        selectedIndustry={selectedIndustry}
         selectedLevel={selectedLevel}
         selectedYear={selectedYear}
         selectedRegion={selectedRegion}
@@ -281,10 +303,10 @@ export default async function AdminLawsPage({
             baseUrl="/admin/laws"
             totalCount={totalCount}
             levels={levels}
-            categories={categories}
-            regions={typedRegions}
+            industries={industries}
+            regionGroups={regionGroups}
             years={years}
-            selectedCategory={selectedCategory}
+            selectedIndustry={selectedIndustry}
             selectedLevel={selectedLevel}
             selectedYear={selectedYear}
             selectedRegion={selectedRegion}

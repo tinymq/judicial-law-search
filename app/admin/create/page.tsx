@@ -12,6 +12,7 @@ import {
   STATUS_OPTIONS,
   REGION_OPTIONS
 } from '@/src/lib/category-config';
+import IndustryPicker from '@/components/admin/IndustryPicker';
 
 type LawOption = {
   id: number;
@@ -44,6 +45,10 @@ export default function CreateLawPage() {
     modifiesLawIds: '',
     rawContent: ''
   });
+
+  // Industry picker state
+  const [primaryIndustryId, setPrimaryIndustryId] = useState<number | null>(null);
+  const [secondaryIndustryIds, setSecondaryIndustryIds] = useState<number[]>([]);
 
   const [previewArticles, setPreview] = useState<{
     title: string;
@@ -245,6 +250,8 @@ export default function CreateLawPage() {
         ...formData,
         lawGroupId: lawGroupIdToUse,
         selectedLawId: selectedLaw?.id,
+        primaryIndustryId,
+        secondaryIndustryIds,
         articles: previewArticles.map((a, i) => ({ ...a, order: i + 1 }))
       });
       alert('录入成功！');
@@ -454,7 +461,7 @@ export default function CreateLawPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">时效性</label>
                         <select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none" value={formData.status} onChange={e => setData({...formData, status: e.target.value})}>
@@ -468,18 +475,22 @@ export default function CreateLawPage() {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">类别</label>
-                        <select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none" value={formData.category} onChange={e => setData({...formData, category: e.target.value})}>
-                            {CATEGORY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                    </div>
-                    <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">区域</label>
                         <select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none" value={formData.region} onChange={e => setData({...formData, region: e.target.value})}>
                             {REGION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                     </div>
                 </div>
+
+                {/* 执法领域选择器（替代旧的 category 下拉） */}
+                <IndustryPicker
+                    primaryIndustryId={primaryIndustryId}
+                    secondaryIndustryIds={secondaryIndustryIds}
+                    onChange={(primary, secondary) => {
+                        setPrimaryIndustryId(primary);
+                        setSecondaryIndustryIds(secondary);
+                    }}
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                     <div>

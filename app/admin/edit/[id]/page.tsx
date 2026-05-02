@@ -1,5 +1,5 @@
 import EditLawClient from './EditLawClient';
-import { getLawWithArticles } from '../../actions';
+import { getLawWithArticles, getLawIndustries } from '../../actions';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
@@ -44,5 +44,7 @@ export default async function EditLawPage({ params }: { params: Promise<{ id: st
     notFound();
   }
 
-  return <EditLawClient law={law} />;
+  const lawIndustries = await getLawIndustries(lawId);
+
+  return <EditLawClient law={{ ...law, lawIndustries }} />;
 }
