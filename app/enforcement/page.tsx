@@ -30,7 +30,7 @@ const PAGE_SIZE = 50;
 export default async function EnforcementPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; level?: string; linked?: string; view?: string; lawLevel?: string; scope?: string; page?: string }>;
+  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; level?: string; linked?: string; view?: string; lawLevel?: string; scope?: string; page?: string; lawId?: string }>;
 }) {
   const params = await searchParams;
   const selectedCategory = params.category ?? '';
@@ -53,8 +53,9 @@ export default async function EnforcementPage({
   if (selectedProvince) where.province = selectedProvince;
   if (selectedDomain) where.enforcementDomain = selectedDomain;
   if (selectedLevel) where.enforcementLevel = { contains: selectedLevel };
-  if (selectedLinked === 'no') where.lawId = null;
-  if (selectedLinked === 'yes') where.lawId = { not: null };
+  if (params.lawId) where.lawId = parseInt(params.lawId);
+  else if (selectedLinked === 'no') where.lawId = null;
+  else if (selectedLinked === 'yes') where.lawId = { not: null };
   if (query) where.name = { contains: query };
 
   // 适用范围筛选
@@ -485,7 +486,7 @@ export default async function EnforcementPage({
                     </div>
                   </div>
                   <Link
-                    href={`/enforcement?linked=yes&q=`}
+                    href={`/enforcement?lawId=${law.id}`}
                     className="shrink-0 text-sm text-slate-500"
                   >
                     <span className="font-semibold text-slate-700">{law._count.enforcementItems}</span> 项事项
