@@ -186,7 +186,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
 
       {/* 桌面端表格容器 */}
       <div className="hidden md:block border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden">
-        <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+        <div className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 150px)' }}>
           <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: '1110px' }}>
             <thead className="bg-slate-50">
               <tr className="border-b-2 border-slate-200">
