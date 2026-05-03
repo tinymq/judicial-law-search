@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import 'react-resizable/css/styles.css';
 import {
   LEVEL_OPTIONS,
-  CATEGORY_OPTIONS,
   STATUS_OPTIONS,
   REGION_OPTIONS
 } from '@/src/lib/category-config';
@@ -22,7 +21,6 @@ interface LawItem {
   effectiveDate: string | Date | null;
   status: string | null;
   level: string;
-  category: string;
   region: string | null;
 }
 
@@ -62,10 +60,9 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
   // 列宽状态管理 - 使用 ref 优化性能，避免每次拖拽都重新渲染
   // 方案2+3：重新分配列宽，重要列（标题、操作）更宽敞
   const columnWidthsRef = useRef<Record<string, number>>({
-    title: 200,          // 重要！显示更多标题内容
-    level: 60,           // 固定内容，可以压缩
-    category: 70,        // 固定内容，可以压缩
-    region: 60,          // 固定内容，可以压缩
+    title: 220,          // 重要！显示更多标题内容
+    level: 70,           // 固定内容，可以压缩
+    region: 70,          // 固定内容，可以压缩
     status: 70,          // 固定内容，可以压缩
     issuingAuthority: 90, // 稍微压缩
     documentNumber: 80,  // 稍微压缩
@@ -185,9 +182,6 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                 <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 font-medium">
                   {law.level}
                 </span>
-                <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                  {law.category}
-                </span>
                 {law.region && law.region !== '全国' && (
                   <span className="bg-teal-50 text-teal-600 px-1.5 py-0.5 rounded border border-teal-100">
                     {law.region}
@@ -232,15 +226,6 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                   onClick={() => handleSort('level')}
                 >
                   位阶<SortIcon field="level" />
-                </ResizableHeader>
-                <ResizableHeader
-                  width={getColumnWidth('category')}
-                  onResize={(e, data) => handleColumnResize('category', e, data)}
-                  dataKey="category"
-                  className="cursor-pointer hover:bg-slate-100"
-                  onClick={() => handleSort('category')}
-                >
-                  类别<SortIcon field="category" />
                 </ResizableHeader>
                 <ResizableHeader
                   width={getColumnWidth('region')}
@@ -321,16 +306,6 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                       title={law.level}
                     >
                       {LEVEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
-                  </td>
-                  <td className="px-3 py-3" style={{ width: `${getColumnWidth('category')}px` }}>
-                    <select
-                      className="w-full bg-transparent border-none p-0 focus:ring-0 cursor-pointer text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded"
-                      defaultValue={law.category}
-                      onChange={(e) => handleUpdateLaw(law.id, { category: e.target.value })}
-                      title={law.category}
-                    >
-                      {CATEGORY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                   </td>
                   <td className="px-3 py-3" style={{ width: `${getColumnWidth('region')}px` }}>

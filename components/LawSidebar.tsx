@@ -102,15 +102,23 @@ export default function LawSidebar({
     });
   };
 
+  // Parse baseUrl for any existing query params (e.g. "/?view=classic")
+  const baseUrlPath = baseUrl.split('?')[0];
+  const baseUrlExtraParams: Record<string, string> = {};
+  if (baseUrl.includes('?')) {
+    new URLSearchParams(baseUrl.split('?')[1]).forEach((v, k) => { baseUrlExtraParams[k] = v; });
+  }
+
   const buildQueryString = (params: Record<string, string>) => {
     const filtered = Object.entries(params)
       .filter(([_, value]) => value)
-      .map(([key, value]) => `${key}=${value}`)
+      .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
       .join('&');
     return filtered ? `?${filtered}` : '';
   };
 
   const baseParams = {
+    ...baseUrlExtraParams,
     industry: selectedIndustry,
     level: selectedLevel,
     year: selectedYear,
@@ -158,7 +166,7 @@ export default function LawSidebar({
               {levels.map((lvl) => (
                 <Link
                   key={lvl.level}
-                  href={`${baseUrl}${buildQueryString({ ...baseParams, level: lvl.level })}`}
+                  href={`${baseUrlPath}${buildQueryString({ ...baseParams, level: lvl.level })}`}
                   className={`flex items-center justify-between px-2 py-1.5 rounded text-sm transition-colors ${
                     selectedLevel === lvl.level
                       ? 'bg-blue-50 text-blue-700 font-medium'
@@ -181,7 +189,7 @@ export default function LawSidebar({
               {statuses.map((stat) => (
                 <Link
                   key={stat.status}
-                  href={`${baseUrl}${buildQueryString({ ...baseParams, status: stat.status })}`}
+                  href={`${baseUrlPath}${buildQueryString({ ...baseParams, status: stat.status })}`}
                   className={`flex items-center justify-between px-2 py-1.5 rounded text-sm transition-colors ${
                     selectedStatus === stat.status
                       ? 'bg-blue-50 text-blue-700 font-medium'
@@ -211,7 +219,7 @@ export default function LawSidebar({
                     return (
                       <Link
                         key={ind.id}
-                        href={`${baseUrl}${buildQueryString({ ...baseParams, industry: String(ind.id) })}`}
+                        href={`${baseUrlPath}${buildQueryString({ ...baseParams, industry: String(ind.id) })}`}
                         className={`flex items-center justify-between px-2 py-1.5 rounded text-sm transition-colors ${
                           isSelected
                             ? 'bg-blue-50 text-blue-700 font-medium'
@@ -238,7 +246,7 @@ export default function LawSidebar({
                           </svg>
                         </button>
                         <Link
-                          href={`${baseUrl}${buildQueryString({ ...baseParams, industry: String(ind.id) })}`}
+                          href={`${baseUrlPath}${buildQueryString({ ...baseParams, industry: String(ind.id) })}`}
                           className={`flex-1 flex items-center justify-between px-1 py-1.5 rounded text-sm transition-colors ${
                             isSelected || childSelected
                               ? 'text-blue-700 font-medium'
@@ -254,7 +262,7 @@ export default function LawSidebar({
                           {ind.children.map((child) => (
                             <Link
                               key={child.id}
-                              href={`${baseUrl}${buildQueryString({ ...baseParams, industry: String(child.id) })}`}
+                              href={`${baseUrlPath}${buildQueryString({ ...baseParams, industry: String(child.id) })}`}
                               className={`flex items-center justify-between px-2 py-1 rounded text-xs transition-colors ${
                                 selectedIndustry === String(child.id)
                                   ? 'bg-blue-50 text-blue-700 font-medium'
@@ -288,7 +296,7 @@ export default function LawSidebar({
                   return (
                     <Link
                       key={group.province}
-                      href={`${baseUrl}${buildQueryString({ ...baseParams, region: group.province })}`}
+                      href={`${baseUrlPath}${buildQueryString({ ...baseParams, region: group.province })}`}
                       className={`flex items-center justify-between px-2 py-1.5 rounded text-sm transition-colors ${
                         isProvinceSelected
                           ? 'bg-blue-50 text-blue-700 font-medium'
@@ -324,7 +332,7 @@ export default function LawSidebar({
                       <div className="pl-6 space-y-0.5 mt-0.5">
                         {group.provinceOwnCount > 0 && (
                           <Link
-                            href={`${baseUrl}${buildQueryString({ ...baseParams, region: group.province })}`}
+                            href={`${baseUrlPath}${buildQueryString({ ...baseParams, region: group.province })}`}
                             className={`flex items-center justify-between px-2 py-1 rounded text-xs transition-colors ${
                               isProvinceSelected
                                 ? 'bg-blue-50 text-blue-700 font-medium'
@@ -338,7 +346,7 @@ export default function LawSidebar({
                         {group.children.map((city) => (
                           <Link
                             key={city.name}
-                            href={`${baseUrl}${buildQueryString({ ...baseParams, region: city.name })}`}
+                            href={`${baseUrlPath}${buildQueryString({ ...baseParams, region: city.name })}`}
                             className={`flex items-center justify-between px-2 py-1 rounded text-xs transition-colors ${
                               selectedRegion === city.name
                                 ? 'bg-blue-50 text-blue-700 font-medium'
@@ -366,7 +374,7 @@ export default function LawSidebar({
               {years.map((y) => (
                 <Link
                   key={y.year}
-                  href={`${baseUrl}${buildQueryString({ ...baseParams, year: y.year })}`}
+                  href={`${baseUrlPath}${buildQueryString({ ...baseParams, year: y.year })}`}
                   className={`flex items-center justify-between px-2 py-1.5 rounded text-sm transition-colors ${
                     selectedYear === y.year
                       ? 'bg-blue-50 text-blue-700 font-medium'

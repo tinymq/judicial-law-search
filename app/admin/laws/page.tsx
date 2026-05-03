@@ -20,11 +20,10 @@ export const metadata: Metadata = {
 export default async function AdminLawsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; industry?: string; level?: string; year?: string; region?: string; sort?: string; order?: 'asc' | 'desc'; page?: string; pageSize?: string }>;
+  searchParams: Promise<{ q?: string; industry?: string; level?: string; year?: string; region?: string; sort?: string; order?: 'asc' | 'desc'; page?: string; pageSize?: string }>;
 }) {
   const params = await searchParams;
   const query = (params.q || '').trim();
-  const selectedCategory = params.category || '';
   const selectedIndustry = params.industry || '';
   const selectedLevel = params.level || '';
   const selectedYear = params.year || '';
@@ -109,7 +108,6 @@ export default async function AdminLawsPage({
   // 6. 构建查询条件
   const where: any = {};
 
-  if (selectedCategory) where.category = selectedCategory;
   if (selectedLevel) where.level = selectedLevel;
   if (selectedRegion) where.region = selectedRegion;
 
@@ -228,7 +226,6 @@ export default async function AdminLawsPage({
                     placeholder="搜索法规..."
                     className="w-full pl-9 pr-4 py-1.5 bg-slate-100 border-none rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all outline-none"
                 />
-                {selectedCategory && <input type="hidden" name="category" value={selectedCategory} />}
                 {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
                 {selectedYear && <input type="hidden" name="year" value={selectedYear} />}
                 {selectedRegion && <input type="hidden" name="region" value={selectedRegion} />}
@@ -272,7 +269,6 @@ export default async function AdminLawsPage({
                     placeholder="搜索法规..."
                     className="w-full pl-9 pr-4 py-1.5 bg-slate-100 border-none rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all outline-none"
                 />
-                {selectedCategory && <input type="hidden" name="category" value={selectedCategory} />}
                 {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
                 {selectedYear && <input type="hidden" name="year" value={selectedYear} />}
                 {selectedRegion && <input type="hidden" name="region" value={selectedRegion} />}
@@ -316,31 +312,25 @@ export default async function AdminLawsPage({
         {/* 右侧主内容区 */}
         <main className="flex-1 min-w-0">
             {/* 筛选状态栏 */}
-            {(selectedCategory || selectedLevel || selectedYear || selectedRegion || query) && (
+            {(selectedLevel || selectedYear || selectedRegion || query) && (
                 <div className="mb-4 flex items-center gap-2 text-sm flex-wrap bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
                     <span className="text-slate-500 font-medium">已选:</span>
                     {selectedLevel && (
                         <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-100 flex items-center gap-1">
                             {selectedLevel}
-                            <Link href={`/admin/laws?${selectedCategory ? `category=${selectedCategory}` : ''}${selectedYear ? `&year=${selectedYear}` : ''}${selectedRegion ? `&region=${selectedRegion}` : ''}`} className="hover:text-purple-900">×</Link>
-                        </span>
-                    )}
-                    {selectedCategory && (
-                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100 flex items-center gap-1">
-                            {selectedCategory}
-                            <Link href={`/admin/laws?${selectedLevel ? `level=${selectedLevel}` : ''}${selectedYear ? `&year=${selectedYear}` : ''}${selectedRegion ? `&region=${selectedRegion}` : ''}`} className="hover:text-blue-900">×</Link>
+                            <Link href={`/admin/laws?${selectedYear ? `year=${selectedYear}` : ''}${selectedRegion ? `&region=${selectedRegion}` : ''}`} className="hover:text-purple-900">×</Link>
                         </span>
                     )}
                     {selectedRegion && (
                         <span className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded border border-teal-100 flex items-center gap-1">
                             {selectedRegion}
-                            <Link href={`/admin/laws?${selectedCategory ? `category=${selectedCategory}` : ''}${selectedLevel ? `&level=${selectedLevel}` : ''}${selectedYear ? `&year=${selectedYear}` : ''}`} className="hover:text-teal-900">×</Link>
+                            <Link href={`/admin/laws?${selectedLevel ? `level=${selectedLevel}` : ''}${selectedYear ? `&year=${selectedYear}` : ''}`} className="hover:text-teal-900">×</Link>
                         </span>
                     )}
                     {selectedYear && (
                         <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-100 flex items-center gap-1">
                             {selectedYear}年
-                            <Link href={`/admin/laws?${selectedCategory ? `category=${selectedCategory}` : ''}${selectedLevel ? `&level=${selectedLevel}` : ''}${selectedRegion ? `&region=${selectedRegion}` : ''}`} className="hover:text-green-900">×</Link>
+                            <Link href={`/admin/laws?${selectedLevel ? `level=${selectedLevel}` : ''}${selectedRegion ? `&region=${selectedRegion}` : ''}`} className="hover:text-green-900">×</Link>
                         </span>
                     )}
                     {query && (
@@ -363,7 +353,7 @@ export default async function AdminLawsPage({
               laws={laws}
               currentSort={sortField}
               currentOrder={sortOrder}
-              searchParams={{ q: query, category: selectedCategory, level: selectedLevel, year: selectedYear, region: selectedRegion, pageSize: pageSize !== 50 ? String(pageSize) : '' }}
+              searchParams={{ q: query, level: selectedLevel, year: selectedYear, region: selectedRegion, pageSize: pageSize !== 50 ? String(pageSize) : '' }}
               pagination={{ currentPage: safePage, totalPages, filteredCount, pageSize }}
             />
         </main>

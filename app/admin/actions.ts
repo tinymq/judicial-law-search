@@ -106,7 +106,6 @@ export async function exportLawsToJson() {
           effective_date: formatDate(law.effectiveDate),
           status: law.status,
           level: law.level,
-          category: law.category,
           region: law.region,
           law_group_id: law.lawGroupId
         },
@@ -184,7 +183,6 @@ export async function createLaw(data: any): Promise<number> {
         effectiveDate: data.effectiveDate ? new Date(data.effectiveDate) : null,
         status: data.status || '现行有效',
         level: data.level,
-        category: data.category,
         region: data.region || '全国',
         lawGroupId: resolvedGroup.lawGroupId,
         ...(data.articleFormat !== undefined && { articleFormat: data.articleFormat }),
@@ -398,7 +396,6 @@ export async function updateLawWithArticles(id: number, data: any) {
         effectiveDate: data.effectiveDate ? new Date(data.effectiveDate) : null,
         status: data.status || '现行有效',
         level: data.level,
-        category: data.category,
         region: data.region || '全国',
         ...(data.lawGroupId !== undefined && { lawGroupId: data.lawGroupId }),
         ...(data.articleFormat !== undefined && { articleFormat: data.articleFormat }),

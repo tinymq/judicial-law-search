@@ -48,7 +48,7 @@ export const LEVEL_MIGRATION_MAP = {
 } as const;
 
 /**
- * 法规类别配置（17个类别，按拼音排序）
+ * @deprecated 已废弃 — 由 Industry 表 + LawIndustry 替代。仅保留供历史脚本引用。
  */
 export const CATEGORY_OPTIONS = [
   // 核心类别

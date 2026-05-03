@@ -8,7 +8,6 @@ import { parseQuickInput, parseContent, reconstructText, detectRegionFromTitle }
 import { formatArticleTitle } from '@/src/lib/article-utils';
 import {
   LEVEL_OPTIONS,
-  CATEGORY_OPTIONS,
   STATUS_OPTIONS,
   REGION_OPTIONS
 } from '@/src/lib/category-config';
@@ -48,7 +47,7 @@ interface Law {
   effectiveDate: Date | null;
   status: string | null;
   level: string;
-  category: string;
+  category?: string | null;
   region: string | null;
   industryId: number | null;
   lawGroupId: string | null;
@@ -89,7 +88,6 @@ export default function EditLawClient({ law }: { law: Law }) {
     effectiveDate: formatDate(law.effectiveDate),
     status: law.status || '现行有效',
     level: law.level,
-    category: law.category,
     region: law.region || detectRegionFromTitle(law.title),
     articleFormat: law.articleFormat || 'standard',
     modifiesLawIds: law.modifiesLawIds || '',
@@ -150,7 +148,7 @@ export default function EditLawClient({ law }: { law: Law }) {
    * 包装函数：快速解析法规元数据
    */
   const handleParseQuickInput = () => {
-    parseQuickInput(quickInputText, formData, (data) => setData(data as any), CATEGORY_OPTIONS);
+    parseQuickInput(quickInputText, formData, (data) => setData(data as any));
   };
 
   /**

@@ -36,9 +36,9 @@ type LawResultCardProps = {
     promulgationDate: Date | null;
     effectiveDate: Date | null;
     region: string | null;
-    category: string;
     searchMatchType?: string;
   };
+  index?: number;
   industryName?: string;
   resolvedStatus: string;
 };
@@ -51,21 +51,28 @@ function formatDate(date: Date | null) {
   return `${y}/${m}/${d}`;
 }
 
-export default function LawResultCard({ law, industryName, resolvedStatus }: LawResultCardProps) {
+export default function LawResultCard({ law, index, industryName, resolvedStatus }: LawResultCardProps) {
   const levelBadge = LEVEL_BADGE_COLORS[law.level] || 'bg-slate-50 text-slate-500 border-slate-200';
   const statusColors = STATUS_DOT_COLORS[resolvedStatus] || { dot: 'bg-slate-400', text: 'text-slate-500' };
   const matchInfo = law.searchMatchType ? MATCH_TYPE_LABELS[law.searchMatchType] : null;
-  const displayCategory = industryName || law.category;
-  const categoryColor = getIndustryColor(displayCategory);
+  const displayName = industryName || '执法领域';
+  const categoryColor = getIndustryColor(displayName);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200/60 hover:border-slate-300 hover:shadow-sm transition-all">
       <div className="px-4 sm:px-5 py-3.5 sm:py-4">
         <div className="flex items-start gap-3 mb-2">
-          <span className={`inline-flex items-center gap-1.5 shrink-0 mt-0.5 px-2.5 py-1 rounded text-sm font-medium border ${categoryColor.bg} ${categoryColor.text} ${categoryColor.border}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${categoryColor.dot}`} />
-            {displayCategory}
-          </span>
+          {index != null && (
+            <span className="shrink-0 mt-1.5 text-xs tabular-nums text-slate-300 w-6 text-right">
+              {index}
+            </span>
+          )}
+          {industryName && (
+            <span className={`inline-flex items-center gap-1.5 shrink-0 mt-0.5 px-2.5 py-1 rounded text-sm font-medium border ${categoryColor.bg} ${categoryColor.text} ${categoryColor.border}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${categoryColor.dot}`} />
+              {displayName}
+            </span>
+          )}
           <Link
             href={`/law/${law.id}`}
             target="_blank"

@@ -33,9 +33,15 @@ interface MobileFilterPanelProps {
 }
 
 function buildUrl(baseUrl: string, params: Record<string, string>) {
-  const filtered = Object.entries(params).filter(([, v]) => v);
-  if (filtered.length === 0) return baseUrl;
-  return `${baseUrl}?${filtered.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}`;
+  const path = baseUrl.split('?')[0];
+  const extraParams: Record<string, string> = {};
+  if (baseUrl.includes('?')) {
+    new URLSearchParams(baseUrl.split('?')[1]).forEach((v, k) => { extraParams[k] = v; });
+  }
+  const merged = { ...extraParams, ...params };
+  const filtered = Object.entries(merged).filter(([, v]) => v);
+  if (filtered.length === 0) return path;
+  return `${path}?${filtered.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}`;
 }
 
 export default function MobileFilterPanel({

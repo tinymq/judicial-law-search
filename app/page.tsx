@@ -36,7 +36,6 @@ type SearchLaw = {
   effectiveDate: Date | null;
   status: string | null;
   level: string;
-  category: string;
   region: string | null;
   industryId?: number | null;
   lawGroupId: string | null;
@@ -147,11 +146,10 @@ function scoreLawTitleMatch(title: string, query: string) {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; industry?: string; level?: string; year?: string; region?: string; status?: string; page?: string; view?: string }>;
+  searchParams: Promise<{ q?: string; industry?: string; level?: string; year?: string; region?: string; status?: string; page?: string; view?: string }>;
 }) {
   const params = await searchParams;
   const query = (params.q ?? '').trim();
-  const selectedCategory = params.category ?? '';
   const selectedIndustry = params.industry ?? '';
   const selectedLevel = params.level ?? '';
   const selectedYear = params.year ?? '';
@@ -193,13 +191,7 @@ export default async function Home({
   const statuses = (rawStatuses as Array<{ status: string; _count: { id: number } }>)
     .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
 
-  const categories = await prisma.law.groupBy({
-    by: ['category'],
-    _count: { id: true },
-    orderBy: { category: 'asc' },
-    where: regionFilter,
-  });
-  categories.sort((a, b) => b._count.id - a._count.id);
+  const classicTotalCount = await prisma.law.count({ where: regionFilter });
 
   // Region stats
   const rawRegions = await prisma.law.groupBy({
@@ -301,7 +293,6 @@ export default async function Home({
 
   // === Build filter conditions ===
   const where: any = { ...regionFilter };
-  if (selectedCategory) where.category = selectedCategory;
   if (selectedIndustry) {
     const indId = parseInt(selectedIndustry);
     const selectedInd = allIndustries.find(i => i.id === indId);
@@ -342,11 +333,28 @@ export default async function Home({
     where.promulgationDate = { gte: start, lte: end };
   }
 
+  // === Status stats for cards (follow all filters except status itself) ===
+  const statusStatsWhere = { ...where };
+  delete statusStatsWhere.status;
+  const statusStatsRaw = await prisma.law.groupBy({
+    by: ['status'],
+    _count: { id: true },
+    where: { ...statusStatsWhere, status: { not: null } },
+  });
+  const STATUS_CARD_ORDER = ['现行有效', '已被修改', '已废止', '尚未生效', '部分废止或失效'];
+  const statusStats = (statusStatsRaw as Array<{ status: string; _count: { id: number } }>)
+    .map(s => ({ status: s.status, count: s._count.id }))
+    .sort((a, b) => {
+      const ia = STATUS_CARD_ORDER.indexOf(a.status);
+      const ib = STATUS_CARD_ORDER.indexOf(b.status);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+
   // === Query laws ===
   const selectFields = {
     id: true, title: true, issuingAuthority: true, documentNumber: true,
     promulgationDate: true, effectiveDate: true, status: true, level: true,
-    category: true, region: true, industryId: true, lawGroupId: true,
+    region: true, industryId: true, lawGroupId: true,
     createdAt: true, updatedAt: true,
   } as const;
 
@@ -422,7 +430,7 @@ export default async function Home({
   }
 
   // For classic view: grouped laws
-  const shouldShowGrouped = viewMode === 'classic' && !query && !selectedLevel && !selectedYear && !selectedCategory && !selectedIndustry && !selectedRegion && !selectedStatus;
+  const shouldShowGrouped = viewMode === 'classic' && !query && !selectedLevel && !selectedYear && !selectedIndustry && !selectedRegion && !selectedStatus;
 
   // Classic view needs all laws without pagination
   let classicLaws: SearchLaw[] = [];
@@ -439,16 +447,38 @@ export default async function Home({
     }
   }
 
+  // Industry info for classic view grouping
+  const classicIndustryInfo = new Map<number, { name: string; l1Id: number }>();
+  if (shouldShowGrouped && classicLaws.length > 0) {
+    const lawIds = classicLaws.map(l => l.id);
+    const primaryIndustries = await prisma.lawIndustry.findMany({
+      where: { lawId: { in: lawIds }, isPrimary: true },
+      select: { lawId: true, industry: { select: { id: true, name: true, parentCode: true } } },
+    });
+    for (const pi of primaryIndustries) {
+      if (pi.industry.parentCode) {
+        const parent = allIndustries.find(i => i.code === pi.industry.parentCode);
+        classicIndustryInfo.set(pi.lawId, { name: parent?.name || pi.industry.name, l1Id: parent?.id || pi.industry.id });
+      } else {
+        classicIndustryInfo.set(pi.lawId, { name: pi.industry.name, l1Id: pi.industry.id });
+      }
+    }
+  }
+
   const groupedLaws = shouldShowGrouped
     ? classicLaws.reduce((acc, law) => {
-        const cat = law.category || '未分类';
-        if (!acc[cat]) acc[cat] = [];
-        acc[cat].push(law);
+        const info = classicIndustryInfo.get(law.id);
+        const groupName = info?.name || '未分类';
+        if (!acc[groupName]) acc[groupName] = [];
+        acc[groupName].push(law);
         return acc;
       }, {} as Record<string, SearchLaw[]>)
     : null;
 
-  const classicTotalCount = categories.reduce((a, b) => a + b._count.id, 0);
+  const groupIndustryIds = new Map<string, number>();
+  for (const [, info] of classicIndustryInfo) {
+    if (!groupIndustryIds.has(info.name)) groupIndustryIds.set(info.name, info.l1Id);
+  }
 
   const formatDate = (date: Date | null) => {
     if (!date) return '暂无';
@@ -461,7 +491,6 @@ export default async function Home({
   // === URL builder helpers ===
   function buildQuery(overrides: Record<string, string>) {
     const p: Record<string, string> = {};
-    if (selectedCategory) p.category = selectedCategory;
     if (selectedIndustry) p.industry = selectedIndustry;
     if (selectedLevel) p.level = selectedLevel;
     if (selectedYear) p.year = selectedYear;
@@ -478,7 +507,6 @@ export default async function Home({
 
   function buildQueryClassic(overrides: Record<string, string>) {
     const p: Record<string, string> = { view: 'classic' };
-    if (selectedCategory) p.category = selectedCategory;
     if (selectedIndustry) p.industry = selectedIndustry;
     if (selectedLevel) p.level = selectedLevel;
     if (selectedYear) p.year = selectedYear;
@@ -491,19 +519,13 @@ export default async function Home({
     return qs ? `/?${qs}` : '/';
   }
 
-  const hasFilters = selectedCategory || selectedIndustry || selectedLevel || selectedYear || selectedRegion || selectedStatus || query;
-
-  // Industry stats for cards (count-sorted)
-  const industryStats = industries
-    .map(i => ({ id: i.id, name: i.name, count: i._count }))
-    .sort((a, b) => b.count - a.count);
+  const hasFilters = selectedIndustry || selectedLevel || selectedYear || selectedRegion || selectedStatus || query;
 
   // Find industry name for selected
   const selectedIndustryName = selectedIndustry
     ? allIndustries.find(i => i.id === parseInt(selectedIndustry))?.name
     : undefined;
 
-  // Get the primary industry name for each law (via LawIndustry or category fallback)
   const lawIndustryNames = new Map<number, string>();
   if (viewMode !== 'classic' && laws.length > 0) {
     const lawIds = laws.map(l => l.id);
@@ -523,7 +545,6 @@ export default async function Home({
 
   // === View switch URL ===
   const switchViewParams = new URLSearchParams();
-  if (selectedCategory) switchViewParams.set('category', selectedCategory);
   if (selectedIndustry) switchViewParams.set('industry', selectedIndustry);
   if (selectedLevel) switchViewParams.set('level', selectedLevel);
   if (selectedYear) switchViewParams.set('year', selectedYear);
@@ -559,7 +580,6 @@ export default async function Home({
               <input type="text" name="q" defaultValue={query} placeholder="搜索法规..."
                 className="w-full pl-9 pr-4 py-1.5 bg-slate-100 border-none rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all outline-none" />
               <input type="hidden" name="view" value="classic" />
-              {selectedCategory && <input type="hidden" name="category" value={selectedCategory} />}
               {selectedIndustry && <input type="hidden" name="industry" value={selectedIndustry} />}
               {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
               {selectedYear && <input type="hidden" name="year" value={selectedYear} />}
@@ -583,7 +603,6 @@ export default async function Home({
               <input type="text" name="q" defaultValue={query} placeholder="搜索法规..."
                 className="w-full pl-9 pr-4 py-1.5 bg-slate-100 border-none rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all outline-none" />
               <input type="hidden" name="view" value="classic" />
-              {selectedCategory && <input type="hidden" name="category" value={selectedCategory} />}
               {selectedIndustry && <input type="hidden" name="industry" value={selectedIndustry} />}
               {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
               {selectedYear && <input type="hidden" name="year" value={selectedYear} />}
@@ -628,7 +647,7 @@ export default async function Home({
             />
           </div>
 
-          <main className="flex-1 min-w-0" key={`${query}-${selectedCategory}-${selectedIndustry}-${selectedLevel}-${selectedYear}-${selectedRegion}-${selectedStatus}`}>
+          <main className="flex-1 min-w-0" key={`${query}-${selectedIndustry}-${selectedLevel}-${selectedYear}-${selectedRegion}-${selectedStatus}`}>
             {(selectedIndustry || selectedLevel || selectedYear || selectedRegion || selectedStatus || query) && (
               <FilterStatusBar
                 selectedLevel={selectedLevel} selectedIndustry={selectedIndustry}
@@ -652,20 +671,23 @@ export default async function Home({
               </div>
             ) : shouldShowGrouped && groupedLaws ? (
               <div className="space-y-6">
-                {Object.entries(groupedLaws).map(([category, categoryLaws]) => (
-                  <div key={category}>
+                {Object.entries(groupedLaws).map(([groupName, groupLaws]) => {
+                  const industryId = groupIndustryIds.get(groupName);
+                  const moreHref = industryId ? buildQueryClassic({ industry: String(industryId) }) : buildQueryClassic({});
+                  return (
+                  <div key={groupName}>
                     <div className="flex items-center justify-between mb-3 px-1">
                       <h2 className="text-base font-bold text-slate-700 flex items-center gap-2">
                         <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
-                        {category}
-                        <span className="text-sm font-normal text-slate-400">({categoryLaws.length})</span>
+                        {groupName}
+                        <span className="text-sm font-normal text-slate-400">({groupLaws.length})</span>
                       </h2>
-                      {categoryLaws.length > 5 && (
-                        <Link href={buildQueryClassic({ category })} className="text-sm text-blue-600 hover:text-blue-800 font-medium">更多 →</Link>
+                      {groupLaws.length > 5 && (
+                        <Link href={moreHref} className="text-sm text-blue-600 hover:text-blue-800 font-medium">更多 →</Link>
                       )}
                     </div>
                     <div className="bg-white border border-slate-200 rounded-lg divide-y divide-slate-100 shadow-sm">
-                      {categoryLaws.slice(0, 5).map((law) => (
+                      {groupLaws.slice(0, 5).map((law) => (
                         <Link href={`/law/${law.id}`} target="_blank" key={law.id} className="group block p-4 hover:bg-slate-50 transition-colors">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
@@ -694,14 +716,15 @@ export default async function Home({
                           </div>
                         </Link>
                       ))}
-                      {categoryLaws.length > 5 && (
-                        <Link href={buildQueryClassic({ category })} className="block px-4 py-3 text-center text-sm text-blue-600 hover:bg-slate-50 hover:text-blue-800 transition-colors">
-                          查看全部 {categoryLaws.length} 部法规 →
+                      {groupLaws.length > 5 && (
+                        <Link href={moreHref} className="block px-4 py-3 text-center text-sm text-blue-600 hover:bg-slate-50 hover:text-blue-800 transition-colors">
+                          查看全部 {groupLaws.length} 部法规 →
                         </Link>
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="bg-white border border-slate-200 rounded-lg divide-y divide-slate-100 shadow-sm">
@@ -817,9 +840,9 @@ export default async function Home({
 
         {/* Stats cards */}
         <LawStatsCards
-          industries={industryStats}
-          selectedIndustry={selectedIndustry}
-          buildHref={(industryId) => buildQuery({ industry: industryId })}
+          statuses={statusStats}
+          selectedStatus={selectedStatus}
+          buildHref={(status) => buildQuery({ status })}
         />
 
         {/* Filter bar */}
@@ -864,10 +887,11 @@ export default async function Home({
           </div>
         ) : (
           <div className="space-y-2">
-            {laws.map((law) => (
+            {laws.map((law, i) => (
               <LawResultCard
                 key={law.id}
                 law={law}
+                index={(currentPage - 1) * PAGE_SIZE + i + 1}
                 industryName={lawIndustryNames.get(law.id)}
                 resolvedStatus={resolveStatus(law.status, law.effectiveDate)}
               />

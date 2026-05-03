@@ -8,7 +8,6 @@ import { parseQuickInput, parseContent } from '../utils/contentParser';
 import { formatArticleTitle } from '@/src/lib/article-utils';
 import {
   LEVEL_OPTIONS,
-  CATEGORY_OPTIONS,
   STATUS_OPTIONS,
   REGION_OPTIONS
 } from '@/src/lib/category-config';
@@ -39,7 +38,6 @@ export default function CreateLawPage() {
     effectiveDate: '',
     status: '现行有效',
     level: '法律',
-    category: '综合监管',
     region: '全国',
     articleFormat: 'standard',
     modifiesLawIds: '',
@@ -93,7 +91,7 @@ export default function CreateLawPage() {
    * 包装函数：快速解析法规元数据
    */
   const handleParseQuickInput = () => {
-    parseQuickInput(quickInputText, formData, (data) => setData(data as any), CATEGORY_OPTIONS);
+    parseQuickInput(quickInputText, formData, (data) => setData(data as any));
   };
 
   /**

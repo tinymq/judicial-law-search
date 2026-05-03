@@ -66,7 +66,8 @@ export default async function LawDetail({
             }
           }
         }
-      }
+      },
+      industry: { select: { name: true } },
     }
   });
 
@@ -416,8 +417,8 @@ export default async function LawDetail({
                       </div>
                   </div>
 
-                  {/* 第5行：法规类别（单列） */}
-                  <MetaRow label="法规类别" value={law.category} />
+                  {/* 第5行：执法领域（单列） */}
+                  <MetaRow label="执法领域" value={law.industry?.name || '未分类'} />
                </div>
             </div>
           </header>

@@ -50,8 +50,8 @@ model Law {
   status                    String?     @default("现行有效")
   /// 效力位阶 - 如：法律、行政法规、部门规章、地方性法规、地方政府规章、规范性文件等
   level                     String      @default("法律")
-  /// 法规类别 - 暂保留，后续由 industryId 替代
-  category                  String      @default("综合监管")
+  /// 法规类别 - 已废弃，由 Industry + LawIndustry 替代
+  category                  String?
   /// 适用地区 - 如：全国、江苏、北京等
   region                    String?
   /// 所属行业ID - 关联 Industry 表
@@ -75,7 +75,6 @@ model Law {
   feedbacks                 LawFeedback[]
 
   @@index([title])
-  @@index([category])
   @@index([region])
   @@index([status])
   @@index([lawGroupId])

@@ -134,7 +134,7 @@ export default function LawDetailPrototype({
     normalizedStatus === '已废止' ? 'bg-rose-100 text-rose-800 border-rose-200' :
     'bg-violet-100 text-violet-800 border-violet-200';
 
-  const usageSummary = `这部法规主要服务于${law.category}场景，可用于执法监督与检查清单编制。`;
+  const usageSummary = `这部法规主要服务于${law.industry?.name || '综合'}场景，可用于执法监督与检查清单编制。`;
 
   return (
     <div id="page-top" className="max-w-7xl mx-auto px-4 py-8">
@@ -169,7 +169,7 @@ export default function LawDetailPrototype({
                     <div className="rounded-2xl bg-slate-50 p-3"><div className="text-slate-400">公布日期</div><div className="mt-1 font-semibold text-slate-800">{formatDate(law.promulgationDate)}</div></div>
                     <div className="rounded-2xl bg-slate-50 p-3"><div className="text-slate-400">施行日期</div><div className="mt-1 font-semibold text-slate-800">{formatDate(law.effectiveDate)}</div></div>
                     <div className="rounded-2xl bg-slate-50 p-3"><div className="text-slate-400">效力位阶</div><div className="mt-1 font-semibold text-slate-800">{law.level || '-'}</div></div>
-                    <div className="rounded-2xl bg-slate-50 p-3"><div className="text-slate-400">法规类别</div><div className="mt-1 font-semibold text-slate-800">{law.category}</div></div>
+                    <div className="rounded-2xl bg-slate-50 p-3"><div className="text-slate-400">执法领域</div><div className="mt-1 font-semibold text-slate-800">{law.industry?.name || '未分类'}</div></div>
                   </div>
                 </div>
               </div>
@@ -220,7 +220,7 @@ export default function LawDetailPrototype({
                 <div className="text-slate-400 font-medium text-sm">效力位阶</div>
                 <div className="text-slate-700 text-sm">{law.level || '-'}</div>
               </div>
-              <MetaRow label="法规类别" value={law.category} />
+              <MetaRow label="执法领域" value={law.industry?.name || '未分类'} />
             </div>
           </div>
 

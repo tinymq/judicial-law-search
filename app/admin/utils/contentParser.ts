@@ -59,7 +59,6 @@ export interface FormData {
   effectiveDate?: string;
   status?: string;
   level?: string;
-  category?: string;
   region?: string;
   rawContent?: string;
 }
@@ -262,18 +261,15 @@ export const detectRegionFromTitle = (title: string): string => {
  * - 施行日期
  * - 时效性
  * - 效力位阶
- * - 法规类别
  *
  * @param quickInputText - 格式化的法规元数据文本
  * @param formData - 当前表单数据
  * @param setData - 更新表单数据的函数
- * @param CATEGORY_OPTIONS - 法规类别选项列表
  */
 export const parseQuickInput = (
   quickInputText: string,
   formData: FormData,
   setData: (data: FormData | ((prev: FormData) => FormData)) => void,
-  CATEGORY_OPTIONS: readonly string[]  // 改为 readonly 类型
 ): void => {
   const text = quickInputText.trim();
   if (!text) return;
@@ -377,29 +373,6 @@ export const parseQuickInput = (
       parsed.level = levelValue;
     }
 
-    const categoryMatch = text.match(/法规类别[：:]\s*([^\n]+)/);
-    if (categoryMatch) {
-      const categoryText = categoryMatch[1].trim();
-
-      // 查找所有匹配的类别
-      const matchedCategories = CATEGORY_OPTIONS.filter(opt =>
-        categoryText.includes(opt)
-      );
-
-      if (matchedCategories.length > 0) {
-        // 优先选择最长匹配（更精确）
-        const bestMatch = matchedCategories.reduce((a, b) =>
-          a.length > b.length ? a : b
-        );
-        parsed.category = bestMatch;
-
-        // 如果有多个匹配，记录到日志
-        if (matchedCategories.length > 1) {
-          console.log('📋 发现多个类别匹配:', matchedCategories, '选择:', bestMatch);
-        }
-      }
-    }
-
     // 标题验证
     if (!parsed.title || parsed.title.length < 3) {
       console.warn('⚠️ 解析失败：未能识别有效的法规标题');
@@ -422,7 +395,6 @@ export const parseQuickInput = (
       施行日期: parsed.effectiveDate,
       时效性: parsed.status,
       效力位阶: parsed.level,
-      法规类别: parsed.category
     });
 
     // 更新表单数据

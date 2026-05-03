@@ -210,7 +210,6 @@ export async function searchLawsOptimized(
       effectiveDate,
       status,
       level,
-      category,
       region
     FROM Law
     WHERE title LIKE ${searchTerm}

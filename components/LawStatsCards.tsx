@@ -1,34 +1,39 @@
 import Link from 'next/link';
-import { getIndustryColor } from '@/src/lib/industry-colors';
 
-type IndustryStat = {
-  id: number;
-  name: string;
+type StatusStat = {
+  status: string;
   count: number;
 };
 
-type LawStatsCardsProps = {
-  industries: IndustryStat[];
-  selectedIndustry: string;
-  buildHref: (industryId: string) => string;
+const STATUS_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+  '现行有效': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+  '已被修改': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
+  '已废止': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
+  '尚未生效': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
+  '部分废止或失效': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-400' },
 };
 
-export default function LawStatsCards({ industries, selectedIndustry, buildHref }: LawStatsCardsProps) {
-  if (industries.length === 0) return null;
+const DEFAULT_COLOR = { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200', dot: 'bg-slate-400' };
 
-  const topIndustries = industries.slice(0, 4);
-  const moreIndustries = industries.slice(4);
+type LawStatsCardsProps = {
+  statuses: StatusStat[];
+  selectedStatus: string;
+  buildHref: (status: string) => string;
+};
+
+export default function LawStatsCards({ statuses, selectedStatus, buildHref }: LawStatsCardsProps) {
+  if (statuses.length === 0) return null;
 
   return (
     <div className="mb-6">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        {topIndustries.map(ind => {
-          const color = getIndustryColor(ind.name);
-          const isSelected = selectedIndustry === String(ind.id);
+      <div className={`grid gap-3 sm:gap-4`} style={{ gridTemplateColumns: `repeat(${statuses.length}, minmax(0, 1fr))` }}>
+        {statuses.map(stat => {
+          const color = STATUS_COLORS[stat.status] || DEFAULT_COLOR;
+          const isSelected = selectedStatus === stat.status;
           return (
             <Link
-              key={ind.id}
-              href={buildHref(isSelected ? '' : String(ind.id))}
+              key={stat.status}
+              href={buildHref(isSelected ? '' : stat.status)}
               className={`group rounded-xl border p-4 transition-all hover:shadow-md ${
                 isSelected
                   ? `${color.bg} ${color.border} shadow-sm`
@@ -37,39 +42,15 @@ export default function LawStatsCards({ industries, selectedIndustry, buildHref 
             >
               <div className={`w-2 h-2 rounded-full ${color.dot} mb-3`} />
               <div className="text-3xl font-bold text-slate-900 tabular-nums">
-                {ind.count.toLocaleString()}
+                {stat.count.toLocaleString()}
               </div>
               <div className={`text-sm font-medium mt-1 ${isSelected ? color.text : 'text-slate-500'}`}>
-                {ind.name}
+                {stat.status}
               </div>
             </Link>
           );
         })}
       </div>
-
-      {moreIndustries.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-3">
-          {moreIndustries.map(ind => {
-            const color = getIndustryColor(ind.name);
-            const isSelected = selectedIndustry === String(ind.id);
-            return (
-              <Link
-                key={ind.id}
-                href={buildHref(isSelected ? '' : String(ind.id))}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  isSelected
-                    ? `${color.bg} ${color.text} border ${color.border}`
-                    : 'bg-white text-slate-500 border border-slate-200/60 hover:border-slate-300 hover:text-slate-700'
-                }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${color.dot}`} />
-                {ind.name}
-                <span className="text-xs opacity-60">{ind.count}</span>
-              </Link>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
