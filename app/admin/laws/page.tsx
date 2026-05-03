@@ -7,6 +7,7 @@ import LawStatsCards from '@/components/LawStatsCards';
 import LawFilterBar from '@/components/LawFilterBar';
 import Pagination from '@/components/Pagination';
 import ExportButton from './ExportButton';
+import PageSizeSelect from '@/components/admin/PageSizeSelect';
 import ThemeToggle from '@/components/ThemeToggle';
 import type { Metadata } from 'next';
 import { ADMIN_CONFIG } from '../admin-config';
@@ -369,11 +370,24 @@ export default async function AdminLawsPage({
           </div>
         )}
 
-        {/* Result stats */}
-        <div className="mb-4 text-sm text-slate-500 bg-white p-3 rounded-lg border border-slate-200">
-          显示 <span className="font-bold text-slate-700">{filteredCount}</span> 条结果
-          {filteredCount < totalCount && <span className="text-slate-400">（共 {totalCount} 条）</span>}
-          {totalPages > 1 && <span className="text-slate-400 ml-2">第 {safePage}/{totalPages} 页</span>}
+        {/* Result stats + pageSize */}
+        <div className="mb-3 flex items-center justify-between text-sm text-slate-500 px-1">
+          <div>
+            显示 <span className="font-bold text-slate-700">{filteredCount}</span> 条结果
+            {filteredCount < totalCount && <span className="text-slate-400">（共 {totalCount} 条）</span>}
+            {totalPages > 1 && <span className="text-slate-400 ml-2">第 {safePage}/{totalPages} 页</span>}
+          </div>
+          <PageSizeSelect
+            pageSize={pageSize}
+            searchParams={{
+              q: query,
+              level: selectedLevel,
+              status: selectedStatus,
+              year: selectedYear,
+              region: selectedRegion,
+              industry: selectedIndustry,
+            }}
+          />
         </div>
 
         {/* Table */}
@@ -390,7 +404,6 @@ export default async function AdminLawsPage({
             industry: selectedIndustry,
             pageSize: pageSize !== 50 ? String(pageSize) : '',
           }}
-          pagination={{ currentPage: safePage, totalPages, filteredCount, pageSize }}
         />
 
         {/* Pagination */}

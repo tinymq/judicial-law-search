@@ -24,22 +24,14 @@ interface LawItem {
   region: string | null;
 }
 
-interface PaginationInfo {
-  currentPage: number;
-  totalPages: number;
-  filteredCount: number;
-  pageSize: number;
-}
-
 interface LawTableProps {
   laws: LawItem[];
   currentSort: string;
   currentOrder: 'asc' | 'desc';
   searchParams?: Record<string, string>;
-  pagination?: PaginationInfo;
 }
 
-export default function LawTable({ laws, currentSort, currentOrder, searchParams = {}, pagination }: LawTableProps) {
+export default function LawTable({ laws, currentSort, currentOrder, searchParams = {} }: LawTableProps) {
   const router = useRouter();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -193,7 +185,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
       </div>
 
       {/* 桌面端表格容器 */}
-      <div className="hidden md:block border border-slate-200 rounded-xl shadow-sm bg-white overflow-x-auto">
+      <div className="hidden md:block border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden">
         <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
           <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: '1110px' }}>
             <thead className="bg-slate-50">
@@ -383,38 +375,6 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
         </div>
       </div>
 
-      <div className="text-xs text-slate-400 flex items-center justify-between mt-4">
-        <span className="hidden md:inline">拖拽列边框可调整宽度 | 点击列头可排序</span>
-        <div className="flex items-center gap-3">
-          <span>共 {pagination ? pagination.filteredCount : laws.length} 条结果</span>
-          {pagination && (
-            <span className="flex items-center gap-1">
-              每页
-              <select
-                className="border border-slate-200 rounded px-1 py-0.5 text-xs bg-white cursor-pointer"
-                defaultValue={pagination.pageSize}
-                onChange={(e) => {
-                  const params = new URLSearchParams();
-                  Object.entries(searchParams).forEach(([key, value]) => {
-                    if (value) params.set(key, value);
-                  });
-                  const newSize = Number(e.target.value);
-                  if (newSize !== 50) params.set('pageSize', String(newSize));
-                  else params.delete('pageSize');
-                  params.delete('page'); // 切换 pageSize 回第 1 页
-                  const qs = params.toString();
-                  router.push(`/admin/laws${qs ? `?${qs}` : ''}`);
-                }}
-              >
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-                <option value={500}>500</option>
-              </select>
-              条
-            </span>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
