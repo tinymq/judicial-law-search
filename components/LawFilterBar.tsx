@@ -51,34 +51,40 @@ export default function LawFilterBar({
     : null;
   const showCities = selectedRegionGroup && selectedRegionGroup.children.length > 0;
 
-  return (
-    <div className="bg-white rounded-xl border border-slate-200/60 p-4 mb-6 space-y-3">
-      {/* Search */}
-      <form className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        </div>
-        <input
-          type="text"
-          name="q"
-          defaultValue={query}
-          placeholder="搜索法规名称、制定机关、文号..."
-          className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-base focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all outline-none"
-        />
-        {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
-        {selectedStatus && <input type="hidden" name="status" value={selectedStatus} />}
-        {selectedRegion && <input type="hidden" name="region" value={selectedRegion} />}
-        {selectedIndustry && <input type="hidden" name="industry" value={selectedIndustry} />}
-        {selectedYear && <input type="hidden" name="year" value={selectedYear} />}
-      </form>
+  const activeFilterCount = [selectedLevel, selectedStatus, selectedRegion, selectedIndustry, selectedYear].filter(Boolean).length;
 
-      <details open className="group">
-        <summary className="flex items-center gap-2 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-sm text-slate-400 hover:text-slate-600 transition-colors py-0.5">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-open:rotate-90"><path d="m9 18 6-6-6-6"/></svg>
-          <span>筛选条件</span>
+  return (
+    <div className="bg-white rounded-xl border border-slate-200/60 p-4">
+      <details className="group">
+        <summary className="list-none [&::-webkit-details-marker]:hidden flex items-center gap-3">
+          <form className="flex-1 min-w-0 relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </div>
+            <input
+              type="text"
+              name="q"
+              defaultValue={query}
+              placeholder="搜索法规名称、制定机关、文号..."
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-base focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all outline-none cursor-text"
+            />
+            {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
+            {selectedStatus && <input type="hidden" name="status" value={selectedStatus} />}
+            {selectedRegion && <input type="hidden" name="region" value={selectedRegion} />}
+            {selectedIndustry && <input type="hidden" name="industry" value={selectedIndustry} />}
+            {selectedYear && <input type="hidden" name="year" value={selectedYear} />}
+          </form>
+          <div className="shrink-0 inline-flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-3.5 py-3 cursor-pointer select-none transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <span className="text-sm font-medium text-slate-600">筛选</span>
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-blue-600 text-white">{activeFilterCount}</span>
+            )}
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 transition-transform group-open:rotate-180"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
         </summary>
 
-      <div className="space-y-2.5 mt-2.5">
+      <div className="space-y-2.5 mt-3 pt-3 border-t border-slate-100">
         {/* Level */}
         <FoldableFilterRow
           label="位阶"

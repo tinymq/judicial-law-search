@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef } from 'react';
-import { Resizable } from 'react-resizable';
 
 interface ResizableHeaderProps {
   children: React.ReactNode;
@@ -10,8 +9,7 @@ interface ResizableHeaderProps {
   dataKey: string;
   className?: string;
   onClick?: () => void;
-  stickyLeft?: boolean;
-  stickyRight?: boolean;
+  stickyTop?: number;
 }
 
 export default function ResizableHeader({
@@ -21,60 +19,73 @@ export default function ResizableHeader({
   dataKey,
   className = '',
   onClick,
-  stickyLeft = false,
-  stickyRight = false,
+  stickyTop = 0,
 }: ResizableHeaderProps) {
-  const zIndex = stickyLeft || stickyRight ? 15 : 10;
-
+  const thRef = useRef<HTMLTableCellElement>(null);
   const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
+  const isResizingRef = useRef(false);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    if (isResizingRef.current) return;
     if (!mouseDownPosRef.current) {
       onClick?.();
       return;
     }
-
     const deltaX = Math.abs(e.clientX - mouseDownPosRef.current.x);
     const deltaY = Math.abs(e.clientY - mouseDownPosRef.current.y);
-
     if (deltaX < 5 && deltaY < 5) {
       onClick?.();
     }
-
     mouseDownPosRef.current = null;
   };
 
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = thRef.current?.offsetWidth ?? width;
+    isResizingRef.current = true;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(50, Math.min(500, startWidth + moveEvent.clientX - startX));
+      onResize(moveEvent, { size: { width: newWidth } });
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setTimeout(() => { isResizingRef.current = false; }, 0);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
   return (
-    <Resizable
-      width={width}
-      height={0}
-      minConstraints={[50, 0]}
-      maxConstraints={[500, 0]}
-      onResize={onResize}
-      handle={<span className="react-resizable-handle" />}
-      data-key={dataKey}
+    <th
+      ref={thRef}
+      data-column={dataKey}
+      className={`px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase ${className}`}
+      style={{
+        width: `${width}px`,
+        position: 'sticky',
+        top: stickyTop,
+        zIndex: 10,
+        backgroundColor: 'rgb(248, 250, 252)',
+      }}
+      onMouseDown={handleMouseDown}
+      onClick={handleClick}
     >
-      <th
-        data-column={dataKey}
-        className={`px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase react-resizable ${className} ${stickyLeft ? 'sticky-left-col' : ''} ${stickyRight ? 'sticky-right-col' : ''}`}
-        style={{
-          width: `${width}px`,
-          position: 'sticky',
-          top: '0px',
-          left: stickyLeft ? '0px' : 'auto',
-          right: stickyRight ? '0px' : 'auto',
-          zIndex,
-          backgroundColor: 'rgb(248, 250, 252)',
-        }}
-        onMouseDown={handleMouseDown}
-        onClick={handleClick}
-      >
-        {children}
-      </th>
-    </Resizable>
+      {children}
+      <div className="col-resize-handle" onMouseDown={handleResizeStart} />
+    </th>
   );
 }

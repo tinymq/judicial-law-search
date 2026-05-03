@@ -383,37 +383,20 @@
   }
 }
 
-/* ========== LawTable 列宽拖拽和固定列 ========== */
+/* ========== LawTable 列宽拖拽 ========== */
 
-.react-resizable {
-  position: relative;
-  background-clip: padding-box;
-}
-
-.react-resizable-handle {
+.col-resize-handle {
   position: absolute;
-  right: -3px;
+  right: 0;
   top: 0;
   bottom: 0;
-  width: 6px;
+  width: 7px;
   cursor: col-resize;
   background-color: transparent;
   z-index: 20;
-  transition: background-color 0.2s;
+  transition: background-color 0.15s;
 }
 
-.react-resizable-handle:hover {
-  background-color: #3b82f6;
-}
-
-.react-resizable-handle:active {
-  background-color: #2563eb;
-}
-
-.sticky-left-col {
-  border-right: 2px solid #e2e8f0;
-}
-
-.sticky-right-col {
-  border-left: 2px solid #e2e8f0;
+.col-resize-handle:hover {
+  background-color: rgba(59, 130, 246, 0.5);
 }

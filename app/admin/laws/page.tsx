@@ -1,5 +1,6 @@
 import { prisma } from '@/src/lib/db';
 import { sortLevelsByOrder } from '@/src/lib/level-utils';
+import { PROVINCES, CITY_TO_PROVINCE, COUNTY_TO_PROVINCE, CITY_CODES } from '@/src/lib/region-config';
 import LawTable from './LawTable';
 import Link from 'next/link';
 import SiteHeader from '@/components/SiteHeader';
@@ -88,9 +89,48 @@ export default async function AdminLawsPage({
     where: { region: { not: null } },
   });
   const typedRegions = rawRegions as Array<{ region: string; _count: { id: number } }>;
-  const regionGroups = typedRegions
-    .sort((a, b) => b._count.id - a._count.id)
-    .map(r => ({ province: r.region, totalCount: r._count.id, provinceOwnCount: r._count.id, children: [] as Array<{ name: string; count: number }> }));
+  const provinceMap = new Map<string, { province: string; totalCount: number; provinceOwnCount: number; children: Array<{ name: string; count: number }> }>();
+  for (const r of typedRegions) {
+    if (r.region === '全国') continue;
+    const prov = PROVINCES.find(p => p.shortName === r.region);
+    if (prov) {
+      const existing = provinceMap.get(prov.code);
+      if (existing) { existing.totalCount += r._count.id; existing.provinceOwnCount += r._count.id; }
+      else provinceMap.set(prov.code, { province: prov.shortName, totalCount: r._count.id, provinceOwnCount: r._count.id, children: [] });
+      continue;
+    }
+    const cityProvinceCode = CITY_TO_PROVINCE[r.region];
+    if (cityProvinceCode) {
+      const existing = provinceMap.get(cityProvinceCode);
+      if (existing) { existing.totalCount += r._count.id; existing.children.push({ name: r.region, count: r._count.id }); }
+      else {
+        const provInfo = PROVINCES.find(p => p.code === cityProvinceCode);
+        provinceMap.set(cityProvinceCode, { province: provInfo?.shortName || '未知', totalCount: r._count.id, provinceOwnCount: 0, children: [{ name: r.region, count: r._count.id }] });
+      }
+      continue;
+    }
+    const countyProvinceCode = COUNTY_TO_PROVINCE[r.region];
+    if (countyProvinceCode) {
+      const existing = provinceMap.get(countyProvinceCode);
+      if (existing) { existing.totalCount += r._count.id; existing.children.push({ name: r.region, count: r._count.id }); }
+      else {
+        const provInfo = PROVINCES.find(p => p.code === countyProvinceCode);
+        provinceMap.set(countyProvinceCode, { province: provInfo?.shortName || '未知', totalCount: r._count.id, provinceOwnCount: 0, children: [{ name: r.region, count: r._count.id }] });
+      }
+      continue;
+    }
+    const otherKey = '999999';
+    const existing = provinceMap.get(otherKey);
+    if (existing) { existing.totalCount += r._count.id; existing.children.push({ name: r.region, count: r._count.id }); }
+    else provinceMap.set(otherKey, { province: '其他', totalCount: r._count.id, provinceOwnCount: 0, children: [{ name: r.region, count: r._count.id }] });
+  }
+  const nationwideEntry = typedRegions.find(r => r.region === '全国');
+  const regionGroups = Array.from(provinceMap.entries())
+    .sort(([codeA], [codeB]) => codeA.localeCompare(codeB))
+    .map(([, g]) => ({ ...g, children: g.children.sort((a, b) => (CITY_CODES[a.name] || '999999').localeCompare(CITY_CODES[b.name] || '999999')) }));
+  if (nationwideEntry) {
+    regionGroups.unshift({ province: '全国', totalCount: nationwideEntry._count.id, provinceOwnCount: nationwideEntry._count.id, children: [] });
+  }
 
   // 4. Year stats
   const yearRows = await prisma.$queryRaw<Array<{ year: string; count: number }>>`
@@ -304,27 +344,30 @@ export default async function AdminLawsPage({
         </div>
       </header>
 
-      <section className="max-w-[1400px] mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <div className="sticky top-14 z-[15] bg-slate-50" data-sticky-filter>
+        <div className="max-w-[1400px] mx-auto px-3 sm:px-4 pt-3 sm:pt-4 pb-2">
+          <LawFilterBar
+            query={query}
+            levels={levels}
+            regionGroups={regionGroups}
+            industries={industries}
+            years={years}
+            selectedLevel={selectedLevel}
+            selectedStatus={selectedStatus}
+            selectedRegion={selectedRegion}
+            selectedIndustry={selectedIndustry}
+            selectedYear={selectedYear}
+            buildHref={(overrides) => buildAdminHref(overrides)}
+          />
+        </div>
+      </div>
+
+      <section className="max-w-[1400px] mx-auto px-3 sm:px-4 pt-3 pb-4 sm:pb-6">
         {/* Stats cards */}
         <LawStatsCards
           statuses={statusStats}
           selectedStatus={selectedStatus}
           buildHref={(status) => buildAdminHref({ status })}
-        />
-
-        {/* Filter bar */}
-        <LawFilterBar
-          query={query}
-          levels={levels}
-          regionGroups={regionGroups}
-          industries={industries}
-          years={years}
-          selectedLevel={selectedLevel}
-          selectedStatus={selectedStatus}
-          selectedRegion={selectedRegion}
-          selectedIndustry={selectedIndustry}
-          selectedYear={selectedYear}
-          buildHref={(overrides) => buildAdminHref(overrides)}
         />
 
         {/* Filter status bar */}

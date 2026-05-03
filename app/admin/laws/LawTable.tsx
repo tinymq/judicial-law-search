@@ -1,10 +1,9 @@
 'use client'
 
 import { updateLaw, deleteLaw } from '../actions';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import 'react-resizable/css/styles.css';
 import {
   LEVEL_OPTIONS,
   STATUS_OPTIONS,
@@ -49,8 +48,15 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
     }
   };
 
-  // 列宽状态管理 - 使用 ref 优化性能，避免每次拖拽都重新渲染
-  // 方案2+3：重新分配列宽，重要列（标题、操作）更宽敞
+  const [stickyTop, setStickyTop] = useState(0);
+  useEffect(() => {
+    const filterEl = document.querySelector('[data-sticky-filter]');
+    if (filterEl) {
+      const rect = filterEl.getBoundingClientRect();
+      setStickyTop(rect.bottom);
+    }
+  }, []);
+
   const columnWidthsRef = useRef<Record<string, number>>({
     title: 320,
     level: 80,
@@ -60,7 +66,6 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
     documentNumber: 100,
     promulgationDate: 100,
     effectiveDate: 100,
-    actions: 130,
   });
 
   const handleSort = (field: string) => {
@@ -185,16 +190,15 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
       </div>
 
       {/* 桌面端表格容器 */}
-      <div className="hidden md:block border border-slate-200 rounded-xl shadow-sm bg-white overflow-hidden">
-        <div className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 150px)' }}>
-          <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: '1110px' }}>
+      <div className="hidden md:block border border-slate-200 rounded-xl shadow-sm bg-white" style={{ overflowX: 'clip' }}>
+          <table className="w-full text-sm border-separate" style={{ tableLayout: 'fixed', minWidth: '1110px', borderSpacing: 0 }}>
             <thead className="bg-slate-50">
               <tr className="border-b-2 border-slate-200">
                 <ResizableHeader
                   width={getColumnWidth('title')}
                   onResize={(e, data) => handleColumnResize('title', e, data)}
                   dataKey="title"
-                  stickyLeft
+                  stickyTop={stickyTop}
                 >
                   法规标题
                 </ResizableHeader>
@@ -204,6 +208,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                   dataKey="level"
                   className="cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('level')}
+                  stickyTop={stickyTop}
                 >
                   位阶<SortIcon field="level" />
                 </ResizableHeader>
@@ -213,6 +218,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                   dataKey="region"
                   className="cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('region')}
+                  stickyTop={stickyTop}
                 >
                   区域<SortIcon field="region" />
                 </ResizableHeader>
@@ -222,6 +228,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                   dataKey="status"
                   className="cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('status')}
+                  stickyTop={stickyTop}
                 >
                   时效性<SortIcon field="status" />
                 </ResizableHeader>
@@ -229,6 +236,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                   width={getColumnWidth('issuingAuthority')}
                   onResize={(e, data) => handleColumnResize('issuingAuthority', e, data)}
                   dataKey="issuingAuthority"
+                  stickyTop={stickyTop}
                 >
                   制定机关
                 </ResizableHeader>
@@ -236,6 +244,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                   width={getColumnWidth('documentNumber')}
                   onResize={(e, data) => handleColumnResize('documentNumber', e, data)}
                   dataKey="documentNumber"
+                  stickyTop={stickyTop}
                 >
                   发文字号
                 </ResizableHeader>
@@ -245,6 +254,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                   dataKey="promulgationDate"
                   className="cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('promulgationDate')}
+                  stickyTop={stickyTop}
                 >
                   公布日期<SortIcon field="promulgationDate" />
                 </ResizableHeader>
@@ -254,24 +264,22 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                   dataKey="effectiveDate"
                   className="cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('effectiveDate')}
+                  stickyTop={stickyTop}
                 >
                   施行日期<SortIcon field="effectiveDate" />
                 </ResizableHeader>
-                <ResizableHeader
-                  width={getColumnWidth('actions')}
-                  onResize={(e, data) => handleColumnResize('actions', e, data)}
-                  dataKey="actions"
-                  className="text-center"
-                  stickyRight
+                <th
+                  className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase"
+                  style={{ width: '100px', position: 'sticky', top: stickyTop, zIndex: 10, backgroundColor: 'rgb(248, 250, 252)' }}
                 >
                   操作
-                </ResizableHeader>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {laws.map((law) => (
                 <tr key={law.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="px-3 py-3 sticky-left-col" style={{ width: `${getColumnWidth('title')}px`, position: 'sticky', left: '0px', backgroundColor: 'white', zIndex: 5, borderRight: '2px solid #e2e8f0' }}>
+                  <td className="px-3 py-3" style={{ width: `${getColumnWidth('title')}px` }}>
                     <div className="truncate" title={law.title}>
                       <Link href={`/law/${law.id}`} target="_blank" className="font-bold text-slate-900 hover:text-blue-600 transition-colors text-xs">
                         {law.title}
@@ -348,7 +356,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                         title={formatDateForInput(law.effectiveDate) || '暂无日期'}
                     />
                   </td>
-                  <td className="px-3 py-3 text-center sticky-right-col" style={{ width: `${getColumnWidth('actions')}px`, position: 'sticky', right: '0px', backgroundColor: 'white', zIndex: 5, borderLeft: '2px solid #e2e8f0' }}>
+                  <td className="px-3 py-3 text-center" style={{ width: '100px' }}>
                     <div className="flex items-center justify-center gap-1">
                       <button
                         onClick={() => router.push(`/admin/edit/${law.id}`)}
@@ -372,7 +380,6 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
               ))}
             </tbody>
           </table>
-        </div>
       </div>
 
     </div>

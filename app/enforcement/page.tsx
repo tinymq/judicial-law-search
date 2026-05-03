@@ -207,29 +207,187 @@ export default async function EnforcementPage({
         </div>
       </header>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* 页头 + 统计卡片 */}
-        <div className="mb-8">
-          <div className="flex items-end justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">执法事项目录</h1>
-              <p className="text-base text-slate-500 mt-1">
-                共 <span className="font-semibold text-slate-700">{allCount}</span> 项执法事项
-                {hasFilters && totalCount !== allCount && (
-                  <span className="ml-1">
-                    ，当前筛选 <span className="font-semibold text-blue-600">{totalCount}</span> 项
-                  </span>
+      {/* Sticky title + search + filter */}
+      {(() => {
+        const activeFilterCount = [selectedProvince, selectedScope, selectedLevel, selectedDomain].filter(Boolean).length;
+        return (
+      <div className="sticky top-14 z-10 bg-[var(--color-bg-primary,#faf8f5)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+          <details className="group bg-white rounded-xl border border-slate-200/60 p-4">
+            <summary className="list-none [&::-webkit-details-marker]:hidden flex items-center gap-4 flex-wrap sm:flex-nowrap">
+              <div className="shrink-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-tight">执法事项目录</h1>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  共 <span className="font-semibold text-slate-700">{allCount}</span> 项
+                  {hasFilters && totalCount !== allCount && (
+                    <span className="ml-1">
+                      · 筛选 <span className="font-semibold text-blue-600">{totalCount}</span> 项
+                    </span>
+                  )}
+                  {hasFilters && (
+                    <Link href="/enforcement" className="ml-2 text-slate-400 hover:text-slate-600 underline underline-offset-2">
+                      重置
+                    </Link>
+                  )}
+                </p>
+              </div>
+              <form className="flex-1 min-w-0 relative order-last sm:order-none w-full sm:w-auto">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                </div>
+                <input
+                  type="text"
+                  name="q"
+                  defaultValue={query}
+                  placeholder="搜索事项名称..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all outline-none cursor-text"
+                />
+                {selectedCategory && <input type="hidden" name="category" value={selectedCategory} />}
+                {selectedIndustry && <input type="hidden" name="industry" value={selectedIndustry} />}
+                {selectedProvince && <input type="hidden" name="province" value={selectedProvince} />}
+                {selectedDomain && <input type="hidden" name="domain" value={selectedDomain} />}
+                {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
+                {selectedLinked && <input type="hidden" name="linked" value={selectedLinked} />}
+                {selectedScope && <input type="hidden" name="scope" value={selectedScope} />}
+              </form>
+              <div className="shrink-0 inline-flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-3.5 py-2.5 cursor-pointer select-none transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                <span className="text-sm font-medium text-slate-600">筛选</span>
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-blue-600 text-white">{activeFilterCount}</span>
                 )}
-              </p>
-            </div>
-            {hasFilters && (
-              <Link href="/enforcement" className="text-sm text-slate-400 hover:text-slate-600 underline underline-offset-2">
-                重置筛选
-              </Link>
-            )}
-          </div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 transition-transform group-open:rotate-180"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+            </summary>
 
-          {/* 统计卡片 */}
+            <div className="flex flex-wrap gap-x-6 gap-y-3 mt-3 pt-3 border-t border-slate-100">
+              {/* 省份筛选 */}
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">来源</span>
+                <div className="flex-1 min-w-0">
+                <div className="flex gap-2 flex-wrap">
+                  {PROVINCE_OPTIONS.map(p => {
+                    const stat = provinceStats.find(s => s.province === p.code);
+                    return (
+                      <Link
+                        key={p.code}
+                        href={buildQuery({ province: selectedProvince === p.code ? '' : p.code })}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                          selectedProvince === p.code
+                            ? 'bg-slate-800 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {p.label}
+                        {stat && <span className="ml-1 opacity-50">{stat._count.id}</span>}
+                      </Link>
+                    );
+                  })}
+                </div>
+                </div>
+              </div>
+
+              {/* 适用范围筛选 */}
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">范围</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex gap-2 flex-wrap">
+                    {['通用', ...provinceStats.map(s => PROVINCE_NAMES[s.province]).filter(Boolean)].map(scope => (
+                      <Link
+                        key={scope}
+                        href={buildQuery({ scope: selectedScope === scope ? '' : scope })}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                          selectedScope === scope
+                            ? 'bg-slate-800 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {scope}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 层级筛选 */}
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">层级</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex gap-2 flex-wrap">
+                    {['省级', '市级', '县级', '乡级'].map(level => (
+                      <Link
+                        key={level}
+                        href={buildQuery({ level: selectedLevel === level ? '' : level })}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                          selectedLevel === level
+                            ? 'bg-slate-800 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {level}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 执法领域筛选 */}
+              {domainStats.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">领域</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex gap-2 flex-wrap">
+                      {domainStats.slice(0, 14).map(d => (
+                        <Link
+                          key={d.enforcementDomain}
+                          href={buildQuery({ domain: selectedDomain === d.enforcementDomain! ? '' : d.enforcementDomain! })}
+                          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                            selectedDomain === d.enforcementDomain
+                              ? 'bg-slate-800 text-white shadow-sm'
+                              : 'text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          {d.enforcementDomain}
+                          <span className="ml-1 opacity-50">{d._count.id}</span>
+                        </Link>
+                      ))}
+                    </div>
+                    {domainStats.length > 14 && (
+                      <details className="mt-2" open={!!selectedDomain && domainStats.slice(14).some(d => d.enforcementDomain === selectedDomain)}>
+                        <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden pl-3">
+                          +{domainStats.length - 14} 个领域
+                        </summary>
+                        <div className="flex gap-2 flex-wrap mt-2">
+                          {domainStats.slice(14).map(d => (
+                            <Link
+                              key={d.enforcementDomain}
+                              href={buildQuery({ domain: selectedDomain === d.enforcementDomain! ? '' : d.enforcementDomain! })}
+                              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                selectedDomain === d.enforcementDomain
+                                  ? 'bg-slate-800 text-white shadow-sm'
+                                  : 'text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              {d.enforcementDomain}
+                              <span className="ml-1 opacity-50">{d._count.id}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </details>
+        </div>
+      </div>
+        );
+      })()}
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-6 sm:pb-8">
+        {/* 统计卡片 */}
+        <div className="mb-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {categoryStats.slice(0, 4).map(stat => {
               const color = getCategoryColor(stat.category);
@@ -253,7 +411,6 @@ export default async function EnforcementPage({
             })}
           </div>
 
-          {/* 更多类别（折叠在第二行） */}
           {categoryStats.length > 4 && (
             <div className="flex flex-wrap gap-2 mt-3">
               {categoryStats.slice(4).map(stat => {
@@ -276,150 +433,6 @@ export default async function EnforcementPage({
               })}
             </div>
           )}
-        </div>
-
-        {/* 筛选栏 */}
-        <div className="bg-white rounded-xl border border-slate-200/60 p-4 mb-6 space-y-3">
-          {/* 搜索框 */}
-          <form className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            </div>
-            <input
-              type="text"
-              name="q"
-              defaultValue={query}
-              placeholder="搜索事项名称..."
-              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-base focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all outline-none"
-            />
-            {selectedCategory && <input type="hidden" name="category" value={selectedCategory} />}
-            {selectedIndustry && <input type="hidden" name="industry" value={selectedIndustry} />}
-            {selectedProvince && <input type="hidden" name="province" value={selectedProvince} />}
-            {selectedDomain && <input type="hidden" name="domain" value={selectedDomain} />}
-            {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
-            {selectedLinked && <input type="hidden" name="linked" value={selectedLinked} />}
-            {selectedScope && <input type="hidden" name="scope" value={selectedScope} />}
-          </form>
-
-          <div className="flex flex-wrap gap-x-6 gap-y-3">
-            {/* 省份筛选 */}
-            <div className="flex items-start gap-2">
-              <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">来源</span>
-              <div className="flex-1 min-w-0">
-              <div className="flex gap-2 flex-wrap">
-                {PROVINCE_OPTIONS.map(p => {
-                  const stat = provinceStats.find(s => s.province === p.code);
-                  return (
-                    <Link
-                      key={p.code}
-                      href={buildQuery({ province: selectedProvince === p.code ? '' : p.code })}
-                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                        selectedProvince === p.code
-                          ? 'bg-slate-800 text-white shadow-sm'
-                          : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {p.label}
-                      {stat && <span className="ml-1 opacity-50">{stat._count.id}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-              </div>
-            </div>
-
-            {/* 适用范围筛选 */}
-            <div className="flex items-start gap-2">
-              <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">范围</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex gap-2 flex-wrap">
-                  {['通用', ...provinceStats.map(s => PROVINCE_NAMES[s.province]).filter(Boolean)].map(scope => (
-                    <Link
-                      key={scope}
-                      href={buildQuery({ scope: selectedScope === scope ? '' : scope })}
-                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                        selectedScope === scope
-                          ? 'bg-slate-800 text-white shadow-sm'
-                          : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {scope}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 层级筛选 */}
-            <div className="flex items-start gap-2">
-              <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">层级</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex gap-2 flex-wrap">
-                  {['省级', '市级', '县级', '乡级'].map(level => (
-                    <Link
-                      key={level}
-                      href={buildQuery({ level: selectedLevel === level ? '' : level })}
-                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                        selectedLevel === level
-                          ? 'bg-slate-800 text-white shadow-sm'
-                          : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {level}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 执法领域筛选（默认折叠，展示前两排） */}
-            {domainStats.length > 0 && (
-              <div className="flex items-start gap-2">
-                <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">领域</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex gap-2 flex-wrap">
-                    {domainStats.slice(0, 14).map(d => (
-                      <Link
-                        key={d.enforcementDomain}
-                        href={buildQuery({ domain: selectedDomain === d.enforcementDomain! ? '' : d.enforcementDomain! })}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                          selectedDomain === d.enforcementDomain
-                            ? 'bg-slate-800 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-slate-100'
-                        }`}
-                      >
-                        {d.enforcementDomain}
-                        <span className="ml-1 opacity-50">{d._count.id}</span>
-                      </Link>
-                    ))}
-                  </div>
-                  {domainStats.length > 14 && (
-                    <details className="mt-2" open={!!selectedDomain && domainStats.slice(14).some(d => d.enforcementDomain === selectedDomain)}>
-                      <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden pl-3">
-                        +{domainStats.length - 14} 个领域
-                      </summary>
-                      <div className="flex gap-2 flex-wrap mt-2">
-                        {domainStats.slice(14).map(d => (
-                          <Link
-                            key={d.enforcementDomain}
-                            href={buildQuery({ domain: selectedDomain === d.enforcementDomain! ? '' : d.enforcementDomain! })}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                              selectedDomain === d.enforcementDomain
-                                ? 'bg-slate-800 text-white shadow-sm'
-                                : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                          >
-                            {d.enforcementDomain}
-                            <span className="ml-1 opacity-50">{d._count.id}</span>
-                          </Link>
-                        ))}
-                      </div>
-                    </details>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* 法规清单视图 */}

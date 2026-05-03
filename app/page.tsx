@@ -13,7 +13,7 @@ import type { Metadata } from 'next';
 import { ADMIN_CONFIG } from './admin/admin-config';
 import { buildLawBaseTitle, normalizeLawTitle } from '@/src/lib/law-grouping';
 import { resolveStatus, statusColor } from '@/src/lib/category-config';
-import { PROVINCES, CITY_TO_PROVINCE, COUNTY_TO_PROVINCE, getAllowedRegionValues } from '@/src/lib/region-config';
+import { PROVINCES, CITY_TO_PROVINCE, COUNTY_TO_PROVINCE, CITY_CODES, getAllowedRegionValues } from '@/src/lib/region-config';
 import RecentViews from '@/src/components/RecentViews';
 import MobileFilterPanel from '@/components/MobileFilterPanel';
 import './app-styles.css';
@@ -239,9 +239,9 @@ export default async function Home({
     else provinceMap.set(otherKey, { province: '其他', totalCount: r._count.id, provinceOwnCount: 0, children: [{ name: r.region, count: r._count.id }] });
   }
 
-  const regionGroups = Array.from(provinceMap.values())
-    .sort((a, b) => b.totalCount - a.totalCount)
-    .map(g => ({ ...g, children: g.children.sort((a, b) => b.count - a.count) }));
+  const regionGroups = Array.from(provinceMap.entries())
+    .sort(([codeA], [codeB]) => codeA.localeCompare(codeB))
+    .map(([, g]) => ({ ...g, children: g.children.sort((a, b) => (CITY_CODES[a.name] || '999999').localeCompare(CITY_CODES[b.name] || '999999')) }));
   if (nationwideEntry) {
     regionGroups.unshift({ province: '全国', totalCount: nationwideEntry._count.id, provinceOwnCount: nationwideEntry._count.id, children: [] });
   }
@@ -806,7 +806,6 @@ export default async function Home({
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             <Link href="/" className="text-sm font-semibold text-slate-900 hidden sm:inline">法规检索</Link>
             <Link href="/enforcement" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">执法事项</Link>
-            <Link href="/enforcement/plan" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">梳理方案</Link>
             <Link href="/admin/laws" target="_blank" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">后台管理</Link>
             <Link href={classicViewUrl} title="切换到经典视图" className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -816,27 +815,30 @@ export default async function Home({
         </div>
       </header>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="sticky top-14 z-10 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+          <LawFilterBar
+            query={query}
+            levels={levels}
+            regionGroups={regionGroups}
+            industries={industries}
+            years={years}
+            selectedLevel={selectedLevel}
+            selectedStatus={selectedStatus}
+            selectedRegion={selectedRegion}
+            selectedIndustry={selectedIndustry}
+            selectedYear={selectedYear}
+            buildHref={(overrides) => buildQuery(overrides)}
+          />
+        </div>
+      </div>
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-6 sm:pb-8">
         {/* Stats cards */}
         <LawStatsCards
           statuses={statusStats}
           selectedStatus={selectedStatus}
           buildHref={(status) => buildQuery({ status })}
-        />
-
-        {/* Filter bar */}
-        <LawFilterBar
-          query={query}
-          levels={levels}
-          regionGroups={regionGroups}
-          industries={industries}
-          years={years}
-          selectedLevel={selectedLevel}
-          selectedStatus={selectedStatus}
-          selectedRegion={selectedRegion}
-          selectedIndustry={selectedIndustry}
-          selectedYear={selectedYear}
-          buildHref={(overrides) => buildQuery(overrides)}
         />
 
         {/* Result header */}
