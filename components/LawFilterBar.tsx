@@ -74,8 +74,12 @@ export default function LawFilterBar({
 
       <div className="space-y-2.5">
         {/* Level */}
-        <FilterRow label="位阶">
-          {levels.map(l => (
+        <FoldableFilterRow
+          label="位阶"
+          items={levels}
+          visibleCount={10}
+          isSelected={(l) => selectedLevel === l.level}
+          renderItem={(l) => (
             <Link
               key={l.level}
               href={buildHref({ level: selectedLevel === l.level ? '' : l.level })}
@@ -84,13 +88,18 @@ export default function LawFilterBar({
               {l.level}
               <span className="ml-1 opacity-50">{l._count.id}</span>
             </Link>
-          ))}
-        </FilterRow>
+          )}
+          foldLabel="个位阶"
+        />
 
         {/* Region */}
         <div>
-          <FilterRow label="区域">
-            {regionGroups.map(g => (
+          <FoldableFilterRow
+            label="区域"
+            items={regionGroups}
+            visibleCount={10}
+            isSelected={(g) => selectedRegion === g.province || g.children.some(c => c.name === selectedRegion)}
+            renderItem={(g) => (
               <Link
                 key={g.province}
                 href={buildHref({ region: selectedRegion === g.province ? '' : g.province })}
@@ -99,8 +108,9 @@ export default function LawFilterBar({
                 {g.province}
                 <span className="ml-1 opacity-50">{g.totalCount}</span>
               </Link>
-            ))}
-          </FilterRow>
+            )}
+            foldLabel="个区域"
+          />
           {showCities && (
             <div className="ml-14 mt-1.5 flex items-start gap-2">
               <span className="text-xs text-slate-400 shrink-0 pt-1">城市</span>
@@ -130,42 +140,23 @@ export default function LawFilterBar({
 
         {/* Industry */}
         <div>
-          <div className="flex items-start gap-2">
-            <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">行业</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex gap-1.5 flex-wrap">
-                {industries.slice(0, 10).map(ind => (
-                  <Link
-                    key={ind.id}
-                    href={buildHref({ industry: selectedIndustry === String(ind.id) ? '' : String(ind.id) })}
-                    className={selectedIndustry === String(ind.id) || (selectedL2Parent?.id === ind.id) ? pillActive : pillDefault}
-                  >
-                    {ind.name}
-                    <span className="ml-1 opacity-50">{ind._count}</span>
-                  </Link>
-                ))}
-              </div>
-              {industries.length > 10 && (
-                <details className="mt-1.5" open={!!selectedIndId && industries.slice(10).some(i => i.id === selectedIndId || i.children.some(c => c.id === selectedIndId))}>
-                  <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden pl-3">
-                    +{industries.length - 10} 个行业
-                  </summary>
-                  <div className="flex gap-1.5 flex-wrap mt-1.5">
-                    {industries.slice(10).map(ind => (
-                      <Link
-                        key={ind.id}
-                        href={buildHref({ industry: selectedIndustry === String(ind.id) ? '' : String(ind.id) })}
-                        className={selectedIndustry === String(ind.id) || (selectedL2Parent?.id === ind.id) ? pillActive : pillDefault}
-                      >
-                        {ind.name}
-                        <span className="ml-1 opacity-50">{ind._count}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </details>
-              )}
-            </div>
-          </div>
+          <FoldableFilterRow
+            label="行业"
+            items={industries}
+            visibleCount={10}
+            isSelected={(ind) => selectedIndustry === String(ind.id) || (selectedL2Parent?.id === ind.id) || ind.children.some(c => c.id === selectedIndId)}
+            renderItem={(ind) => (
+              <Link
+                key={ind.id}
+                href={buildHref({ industry: selectedIndustry === String(ind.id) ? '' : String(ind.id) })}
+                className={selectedIndustry === String(ind.id) || (selectedL2Parent?.id === ind.id) ? pillActive : pillDefault}
+              >
+                {ind.name}
+                <span className="ml-1 opacity-50">{ind._count}</span>
+              </Link>
+            )}
+            foldLabel="个行业"
+          />
           {expandedIndustry && expandedIndustry.children.length > 0 && (
             <div className="ml-14 mt-1.5 flex items-start gap-2">
               <span className="text-xs text-slate-400 shrink-0 pt-1">二级</span>
@@ -186,55 +177,56 @@ export default function LawFilterBar({
         </div>
 
         {/* Year */}
-        <div className="flex items-start gap-2">
-          <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">年份</span>
-          <div className="flex-1 min-w-0">
-            <div className="flex gap-1.5 flex-wrap">
-              {years.slice(0, 11).map(y => (
-                <Link
-                  key={y.year}
-                  href={buildHref({ year: selectedYear === y.year ? '' : y.year })}
-                  className={selectedYear === y.year ? pillActive : pillDefault}
-                >
-                  {y.year}
-                  <span className="ml-1 opacity-50">{y.count}</span>
-                </Link>
-              ))}
-            </div>
-            {years.length > 11 && (
-              <details className="mt-1.5" open={!!selectedYear && years.slice(11).some(y => y.year === selectedYear)}>
-                <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden pl-3">
-                  +{years.length - 11} 个年份
-                </summary>
-                <div className="flex gap-1.5 flex-wrap mt-1.5">
-                  {years.slice(11).map(y => (
-                    <Link
-                      key={y.year}
-                      href={buildHref({ year: selectedYear === y.year ? '' : y.year })}
-                      className={selectedYear === y.year ? pillActive : pillDefault}
-                    >
-                      {y.year}
-                      <span className="ml-1 opacity-50">{y.count}</span>
-                    </Link>
-                  ))}
-                </div>
-              </details>
-            )}
-          </div>
-        </div>
+        <FoldableFilterRow
+          label="年份"
+          items={years}
+          visibleCount={10}
+          isSelected={(y) => selectedYear === y.year}
+          renderItem={(y) => (
+            <Link
+              key={y.year}
+              href={buildHref({ year: selectedYear === y.year ? '' : y.year })}
+              className={selectedYear === y.year ? pillActive : pillDefault}
+            >
+              {y.year}
+              <span className="ml-1 opacity-50">{y.count}</span>
+            </Link>
+          )}
+          foldLabel="个年份"
+        />
       </div>
     </div>
   );
 }
 
-function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
+function FoldableFilterRow<T>({ label, items, visibleCount, isSelected, renderItem, foldLabel }: {
+  label: string;
+  items: T[];
+  visibleCount: number;
+  isSelected: (item: T) => boolean;
+  renderItem: (item: T) => React.ReactNode;
+  foldLabel: string;
+}) {
+  const hasMore = items.length > visibleCount;
+  const foldedHasSelected = hasMore && items.slice(visibleCount).some(isSelected);
+
   return (
     <div className="flex items-start gap-2">
       <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">{label}</span>
       <div className="flex-1 min-w-0">
         <div className="flex gap-1.5 flex-wrap">
-          {children}
+          {items.slice(0, visibleCount).map(renderItem)}
         </div>
+        {hasMore && (
+          <details className="mt-1.5" open={foldedHasSelected}>
+            <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden pl-3">
+              +{items.length - visibleCount} {foldLabel}
+            </summary>
+            <div className="flex gap-1.5 flex-wrap mt-1.5">
+              {items.slice(visibleCount).map(renderItem)}
+            </div>
+          </details>
+        )}
       </div>
     </div>
   );
