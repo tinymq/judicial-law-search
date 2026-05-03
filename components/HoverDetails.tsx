@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react';
+import { useRef, useEffect, useState } from 'react';
 
 export default function HoverDetails({
   children,
@@ -10,13 +10,31 @@ export default function HoverDetails({
   className?: string;
 }) {
   const ref = useRef<HTMLDetailsElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (ref.current) ref.current.open = isOpen;
+  }, [isOpen]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const trigger = el.querySelector('[data-hover-trigger]');
+    if (!trigger) return;
+    const open = () => setIsOpen(true);
+    trigger.addEventListener('mouseenter', open);
+    return () => trigger.removeEventListener('mouseenter', open);
+  }, []);
 
   return (
     <details
       ref={ref}
       className={className}
-      onMouseEnter={() => { if (ref.current) ref.current.open = true; }}
-      onMouseLeave={() => { if (ref.current) ref.current.open = false; }}
+      onMouseLeave={() => setIsOpen(false)}
+      onClick={(e) => {
+        const summary = (e.target as HTMLElement).closest('summary');
+        if (summary) e.preventDefault();
+      }}
     >
       {children}
     </details>

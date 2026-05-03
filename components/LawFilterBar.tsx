@@ -75,7 +75,7 @@ export default function LawFilterBar({
             {selectedIndustry && <input type="hidden" name="industry" value={selectedIndustry} />}
             {selectedYear && <input type="hidden" name="year" value={selectedYear} />}
           </form>
-          <div className="shrink-0 inline-flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-3.5 py-3 cursor-pointer select-none transition-colors">
+          <div data-hover-trigger className="shrink-0 inline-flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-3.5 py-3 cursor-pointer select-none transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             <span className="text-sm font-medium text-slate-600">筛选</span>
             {activeFilterCount > 0 && (
