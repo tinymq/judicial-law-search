@@ -60,15 +60,15 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
   // 列宽状态管理 - 使用 ref 优化性能，避免每次拖拽都重新渲染
   // 方案2+3：重新分配列宽，重要列（标题、操作）更宽敞
   const columnWidthsRef = useRef<Record<string, number>>({
-    title: 220,          // 重要！显示更多标题内容
-    level: 70,           // 固定内容，可以压缩
-    region: 70,          // 固定内容，可以压缩
-    status: 70,          // 固定内容，可以压缩
-    issuingAuthority: 90, // 稍微压缩
-    documentNumber: 80,  // 稍微压缩
-    promulgationDate: 90, // 稍微压缩
-    effectiveDate: 90,   // 稍微压缩
-    actions: 120,        // 重要！按钮需要空间
+    title: 320,
+    level: 80,
+    region: 80,
+    status: 80,
+    issuingAuthority: 120,
+    documentNumber: 100,
+    promulgationDate: 100,
+    effectiveDate: 100,
+    actions: 130,
   });
 
   const handleSort = (field: string) => {
@@ -83,18 +83,6 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
     params.set('sort', field);
     params.set('order', newOrder);
     router.push(`/admin/laws?${params.toString()}`);
-  };
-
-  const buildPageUrl = (page: number) => {
-    const params = new URLSearchParams();
-    Object.entries(searchParams).forEach(([key, value]) => {
-      if (value) params.set(key, value);
-    });
-    if (currentSort !== 'updatedAt') params.set('sort', currentSort);
-    if (currentOrder !== 'desc') params.set('order', currentOrder);
-    if (page > 1) params.set('page', page.toString());
-    const qs = params.toString();
-    return `/admin/laws${qs ? `?${qs}` : ''}`;
   };
 
   const formatDateForInput = (date: string | Date | null | undefined) => {
@@ -207,7 +195,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
       {/* 桌面端表格容器 */}
       <div className="hidden md:block border border-slate-200 rounded-xl shadow-sm bg-white overflow-x-auto">
         <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
-          <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: '940px' }}>
+          <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: '1110px' }}>
             <thead className="bg-slate-50">
               <tr className="border-b-2 border-slate-200">
                 <ResizableHeader
@@ -395,62 +383,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
         </div>
       </div>
 
-      {/* 分页 + 底部提示 */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-center gap-1 py-3">
-          {/* 上一页 */}
-          {pagination.currentPage > 1 ? (
-            <Link
-              href={buildPageUrl(pagination.currentPage - 1)}
-              className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600"
-            >
-              上一页
-            </Link>
-          ) : (
-            <span className="px-3 py-1.5 text-sm border border-slate-100 rounded-lg text-slate-300">上一页</span>
-          )}
-
-          {/* 页码 */}
-          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-            .filter(p => p === 1 || p === pagination.totalPages || Math.abs(p - pagination.currentPage) <= 2)
-            .reduce<(number | 'ellipsis')[]>((acc, p, i, arr) => {
-              if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('ellipsis');
-              acc.push(p);
-              return acc;
-            }, [])
-            .map((item, i) =>
-              item === 'ellipsis' ? (
-                <span key={`e${i}`} className="px-2 py-1.5 text-sm text-slate-400">...</span>
-              ) : (
-                <Link
-                  key={item}
-                  href={buildPageUrl(item as number)}
-                  className={`px-3 py-1.5 text-sm border rounded-lg ${
-                    item === pagination.currentPage
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  {item}
-                </Link>
-              )
-            )}
-
-          {/* 下一页 */}
-          {pagination.currentPage < pagination.totalPages ? (
-            <Link
-              href={buildPageUrl(pagination.currentPage + 1)}
-              className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600"
-            >
-              下一页
-            </Link>
-          ) : (
-            <span className="px-3 py-1.5 text-sm border border-slate-100 rounded-lg text-slate-300">下一页</span>
-          )}
-        </div>
-      )}
-
-      <div className="text-xs text-slate-400 flex items-center justify-between">
+      <div className="text-xs text-slate-400 flex items-center justify-between mt-4">
         <span className="hidden md:inline">拖拽列边框可调整宽度 | 点击列头可排序</span>
         <div className="flex items-center gap-3">
           <span>共 {pagination ? pagination.filteredCount : laws.length} 条结果</span>
