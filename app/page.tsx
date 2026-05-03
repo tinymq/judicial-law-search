@@ -828,7 +828,6 @@ export default async function Home({
         <LawFilterBar
           query={query}
           levels={levels}
-          statuses={statuses}
           regionGroups={regionGroups}
           industries={industries}
           years={years}

@@ -1,7 +1,6 @@
 import Link from 'next/link';
 
 type FilterBarLevel = { level: string; _count: { id: number } };
-type FilterBarStatus = { status: string; _count: { id: number } };
 type FilterBarRegionGroup = {
   province: string;
   totalCount: number;
@@ -19,7 +18,6 @@ type FilterBarYear = { year: string; count: number };
 type LawFilterBarProps = {
   query: string;
   levels: FilterBarLevel[];
-  statuses: FilterBarStatus[];
   regionGroups: FilterBarRegionGroup[];
   industries: FilterBarIndustry[];
   years: FilterBarYear[];
@@ -35,7 +33,7 @@ const pillDefault = "px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 h
 const pillActive = "px-3 py-1.5 rounded-md text-sm font-medium bg-slate-800 text-white shadow-sm";
 
 export default function LawFilterBar({
-  query, levels, statuses, regionGroups, industries, years,
+  query, levels, regionGroups, industries, years,
   selectedLevel, selectedStatus, selectedRegion, selectedIndustry, selectedYear,
   buildHref,
 }: LawFilterBarProps) {
@@ -85,20 +83,6 @@ export default function LawFilterBar({
             >
               {l.level}
               <span className="ml-1 opacity-50">{l._count.id}</span>
-            </Link>
-          ))}
-        </FilterRow>
-
-        {/* Status */}
-        <FilterRow label="时效">
-          {statuses.map(s => (
-            <Link
-              key={s.status}
-              href={buildHref({ status: selectedStatus === s.status ? '' : s.status })}
-              className={selectedStatus === s.status ? pillActive : pillDefault}
-            >
-              {s.status}
-              <span className="ml-1 opacity-50">{s._count.id}</span>
             </Link>
           ))}
         </FilterRow>
@@ -163,7 +147,7 @@ export default function LawFilterBar({
               </div>
               {industries.length > 10 && (
                 <details className="mt-1.5" open={!!selectedIndId && industries.slice(10).some(i => i.id === selectedIndId || i.children.some(c => c.id === selectedIndId))}>
-                  <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden">
+                  <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden pl-3">
                     +{industries.length - 10} 个行业
                   </summary>
                   <div className="flex gap-1.5 flex-wrap mt-1.5">
@@ -206,7 +190,7 @@ export default function LawFilterBar({
           <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">年份</span>
           <div className="flex-1 min-w-0">
             <div className="flex gap-1.5 flex-wrap">
-              {years.slice(0, 6).map(y => (
+              {years.slice(0, 11).map(y => (
                 <Link
                   key={y.year}
                   href={buildHref({ year: selectedYear === y.year ? '' : y.year })}
@@ -217,13 +201,13 @@ export default function LawFilterBar({
                 </Link>
               ))}
             </div>
-            {years.length > 6 && (
-              <details className="mt-1.5" open={!!selectedYear && years.slice(6).some(y => y.year === selectedYear)}>
-                <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden">
-                  +{years.length - 6} 个年份
+            {years.length > 11 && (
+              <details className="mt-1.5" open={!!selectedYear && years.slice(11).some(y => y.year === selectedYear)}>
+                <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden pl-3">
+                  +{years.length - 11} 个年份
                 </summary>
                 <div className="flex gap-1.5 flex-wrap mt-1.5">
-                  {years.slice(6).map(y => (
+                  {years.slice(11).map(y => (
                     <Link
                       key={y.year}
                       href={buildHref({ year: selectedYear === y.year ? '' : y.year })}
@@ -245,10 +229,12 @@ export default function LawFilterBar({
 
 function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-sm font-medium text-slate-400 w-12 shrink-0">{label}</span>
-      <div className="flex gap-1.5 flex-wrap">
-        {children}
+    <div className="flex items-start gap-2">
+      <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">{label}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex gap-1.5 flex-wrap">
+          {children}
+        </div>
       </div>
     </div>
   );

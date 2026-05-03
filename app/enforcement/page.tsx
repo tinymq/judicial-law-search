@@ -303,8 +303,9 @@ export default async function EnforcementPage({
 
           <div className="flex flex-wrap gap-x-6 gap-y-3">
             {/* 省份筛选 */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-slate-400 w-12 shrink-0">来源</span>
+            <div className="flex items-start gap-2">
+              <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">来源</span>
+              <div className="flex-1 min-w-0">
               <div className="flex gap-2 flex-wrap">
                 {PROVINCE_OPTIONS.map(p => {
                   const stat = provinceStats.find(s => s.province === p.code);
@@ -324,45 +325,50 @@ export default async function EnforcementPage({
                   );
                 })}
               </div>
+              </div>
             </div>
 
             {/* 适用范围筛选 */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-slate-400 w-12 shrink-0">范围</span>
-              <div className="flex gap-2 flex-wrap">
-                {['通用', ...provinceStats.map(s => PROVINCE_NAMES[s.province]).filter(Boolean)].map(scope => (
-                  <Link
-                    key={scope}
-                    href={buildQuery({ scope: selectedScope === scope ? '' : scope })}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                      selectedScope === scope
-                        ? 'bg-slate-800 text-white shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    {scope}
-                  </Link>
-                ))}
+            <div className="flex items-start gap-2">
+              <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">范围</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex gap-2 flex-wrap">
+                  {['通用', ...provinceStats.map(s => PROVINCE_NAMES[s.province]).filter(Boolean)].map(scope => (
+                    <Link
+                      key={scope}
+                      href={buildQuery({ scope: selectedScope === scope ? '' : scope })}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                        selectedScope === scope
+                          ? 'bg-slate-800 text-white shadow-sm'
+                          : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {scope}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
 
             {/* 层级筛选 */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-slate-400 w-12 shrink-0">层级</span>
-              <div className="flex gap-2 flex-wrap">
-                {['省级', '市级', '县级', '乡级'].map(level => (
-                  <Link
-                    key={level}
-                    href={buildQuery({ level: selectedLevel === level ? '' : level })}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                      selectedLevel === level
-                        ? 'bg-slate-800 text-white shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    {level}
-                  </Link>
-                ))}
+            <div className="flex items-start gap-2">
+              <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">层级</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex gap-2 flex-wrap">
+                  {['省级', '市级', '县级', '乡级'].map(level => (
+                    <Link
+                      key={level}
+                      href={buildQuery({ level: selectedLevel === level ? '' : level })}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                        selectedLevel === level
+                          ? 'bg-slate-800 text-white shadow-sm'
+                          : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {level}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -389,7 +395,7 @@ export default async function EnforcementPage({
                   </div>
                   {domainStats.length > 14 && (
                     <details className="mt-2" open={!!selectedDomain && domainStats.slice(14).some(d => d.enforcementDomain === selectedDomain)}>
-                      <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden">
+                      <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 select-none list-none [&::-webkit-details-marker]:hidden pl-3">
                         +{domainStats.length - 14} 个领域
                       </summary>
                       <div className="flex gap-2 flex-wrap mt-2">
