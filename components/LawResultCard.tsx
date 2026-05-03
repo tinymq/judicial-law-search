@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { getIndustryColor } from '@/src/lib/industry-colors';
 
 const LEVEL_BADGE_COLORS: Record<string, string> = {
   '法律': 'bg-red-50 text-red-600 border-red-100',
@@ -55,57 +54,49 @@ export default function LawResultCard({ law, index, industryName, resolvedStatus
   const levelBadge = LEVEL_BADGE_COLORS[law.level] || 'bg-slate-50 text-slate-500 border-slate-200';
   const statusColors = STATUS_DOT_COLORS[resolvedStatus] || { dot: 'bg-slate-400', text: 'text-slate-500' };
   const matchInfo = law.searchMatchType ? MATCH_TYPE_LABELS[law.searchMatchType] : null;
-  const displayName = industryName || '执法领域';
-  const categoryColor = getIndustryColor(displayName);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/60 hover:border-slate-300 hover:shadow-sm transition-all">
-      <div className="px-4 sm:px-5 py-3.5 sm:py-4">
-        <div className="flex items-start gap-3 mb-2">
-          {index != null && (
-            <span className="shrink-0 mt-1.5 text-xs tabular-nums text-slate-300 w-6 text-right">
-              {index}
+    <Link href={`/law/${law.id}`} target="_blank" className="group block bg-white rounded-xl border border-slate-200/60 hover:border-slate-300 hover:shadow-sm transition-all">
+      <div className="px-4 sm:px-5 py-3.5 sm:py-4 flex gap-3">
+        {index != null && (
+          <span className="shrink-0 text-sm tabular-nums text-slate-300 font-medium w-6 text-right pt-0.5">{index}</span>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 mb-2">
+            <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-700 leading-snug">{law.title}</h3>
+            {matchInfo && (
+              <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border ${matchInfo.style}`}>
+                {matchInfo.label}
+              </span>
+            )}
+            <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-medium border ${levelBadge}`}>
+              {law.level}
             </span>
-          )}
-          {industryName && (
-            <span className={`inline-flex items-center gap-1.5 shrink-0 mt-0.5 px-2.5 py-1 rounded text-sm font-medium border ${categoryColor.bg} ${categoryColor.text} ${categoryColor.border}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${categoryColor.dot}`} />
-              {displayName}
+          </div>
+          <div className="text-sm text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className={`font-medium ${statusColors.text}`}>
+              {resolvedStatus}
             </span>
-          )}
-          <Link
-            href={`/law/${law.id}`}
-            target="_blank"
-            className="flex-1 min-w-0 text-base font-semibold text-slate-800 hover:text-blue-600 transition-colors leading-snug"
-          >
-            {law.title}
-          </Link>
-          {matchInfo && (
-            <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border ${matchInfo.style}`}>
-              {matchInfo.label}
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap mt-1">
-          <span className={`px-2 py-0.5 rounded text-xs font-medium border ${levelBadge}`}>
-            {law.level}
-          </span>
-          <span className="flex items-center gap-1 text-sm">
-            <span className={`w-1.5 h-1.5 rounded-full ${statusColors.dot}`} />
-            <span className={`${statusColors.text} font-medium`}>{resolvedStatus}</span>
-          </span>
-          <span className="text-slate-200">·</span>
-          <span className="text-sm text-slate-500 truncate max-w-[200px]">{law.issuingAuthority || '暂无'}</span>
-          <span className="text-slate-200">·</span>
-          <span className="text-sm text-slate-500">{formatDate(law.promulgationDate)} 公布</span>
-          {law.region && law.region !== '全国' && (
-            <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-600">
-              {law.region}
-            </span>
-          )}
+            <span className="text-slate-300">|</span>
+            <span className="truncate max-w-[200px]">{law.issuingAuthority || '暂无'}</span>
+            <span className="text-slate-300">|</span>
+            <span>{formatDate(law.promulgationDate)}公布</span>
+            <span className="text-slate-300">|</span>
+            <span>{formatDate(law.effectiveDate)}施行</span>
+            {industryName && (
+              <>
+                <span className="text-slate-300">|</span>
+                <span className="font-medium text-indigo-600">{industryName}</span>
+              </>
+            )}
+            {law.region && law.region !== '全国' && (
+              <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-600">
+                {law.region}
+              </span>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

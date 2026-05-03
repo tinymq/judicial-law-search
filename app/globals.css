@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #faf8f5;
+  --background: #f8fafc;
   --foreground: #1a1a1a;
 
-  /* 优化后的配色方案 */
-  --color-bg-primary: #faf8f5;
-  --color-bg-secondary: #f5f3f0;
+  /* 配色方案 — 与经典视图一致的冷灰色调 */
+  --color-bg-primary: #f8fafc;
+  --color-bg-secondary: #f1f5f9;
   --color-bg-paper: #ffffff;
   --color-text-primary: #1a1a1a;
   --color-text-secondary: #6b6b6b;
   --color-text-tertiary: #9b9b9b;
-  --color-accent: #c8302b;
-  --color-accent-hover: #a82723;
-  --color-border: #e8e6e3;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-border: #e2e8f0;
 
   /* 字体 */
   --font-display: 'Noto Serif SC', serif;
@@ -32,7 +32,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #1a1a1a;
-    --foreground: #faf8f5;
+    --foreground: #f8fafc;
   }
 }
 

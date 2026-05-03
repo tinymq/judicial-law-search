@@ -341,7 +341,7 @@ export default async function Home({
     _count: { id: true },
     where: { ...statusStatsWhere, status: { not: null } },
   });
-  const STATUS_CARD_ORDER = ['现行有效', '已被修改', '已废止', '尚未生效', '部分废止或失效'];
+  const STATUS_CARD_ORDER = ['现行有效', '已被修改', '已废止', '尚未生效'];
   const statusStats = (statusStatsRaw as Array<{ status: string; _count: { id: number } }>)
     .map(s => ({ status: s.status, count: s._count.id }))
     .sort((a, b) => {
@@ -799,7 +799,7 @@ export default async function Home({
   // MODERN VIEW (default)
   // ============================
   return (
-    <div className={`min-h-screen bg-[var(--color-bg-primary,#faf8f5)] font-sans text-slate-900${themeClass ? ' ' + themeClass : ''}`}>
+    <div className={`min-h-screen bg-slate-50 font-sans text-slate-900${themeClass ? ' ' + themeClass : ''}`}>
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
           <SiteHeader />
@@ -817,27 +817,6 @@ export default async function Home({
       </header>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Page header */}
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">法规数据库</h1>
-            <p className="text-base text-slate-500 mt-1">
-              共 <span className="font-semibold text-slate-700">{totalCount.toLocaleString()}</span> 部法规
-              {hasFilters && (
-                <span className="ml-1">
-                  {query ? '' : ` · 第 ${currentPage}/${totalPages} 页`}
-                </span>
-              )}
-              {!hasFilters && totalPages > 1 && (
-                <span className="ml-1"> · 第 {currentPage}/{totalPages} 页</span>
-              )}
-            </p>
-          </div>
-          {hasFilters && (
-            <Link href="/" className="text-sm text-slate-400 hover:text-slate-600 underline underline-offset-2">重置筛选</Link>
-          )}
-        </div>
-
         {/* Stats cards */}
         <LawStatsCards
           statuses={statusStats}
@@ -872,7 +851,12 @@ export default async function Home({
               <>共 {totalCount.toLocaleString()} 部法规{totalPages > 1 && ` · 第 ${currentPage}/${totalPages} 页`}</>
             )}
           </div>
-          <RecentViewsDropdown />
+          <div className="flex items-center gap-3">
+            {hasFilters && (
+              <Link href="/" className="text-sm text-slate-400 hover:text-slate-600 underline underline-offset-2">重置筛选</Link>
+            )}
+            <RecentViewsDropdown />
+          </div>
         </div>
 
         {/* Law list */}
