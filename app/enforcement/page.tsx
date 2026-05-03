@@ -2,6 +2,7 @@ import Link from 'next/link';
 import SiteHeader from '@/components/SiteHeader';
 import ThemeToggle from '@/components/ThemeToggle';
 import Pagination from '@/components/Pagination';
+import HoverDetails from '@/components/HoverDetails';
 import { prisma } from '@/src/lib/db';
 import { ENFORCEMENT_CATEGORIES } from '@/src/lib/industry-config';
 import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR, LEVEL_COLORS, getCategoryColor } from '@/src/lib/enforcement-constants';
@@ -213,7 +214,7 @@ export default async function EnforcementPage({
         return (
       <div className="sticky top-14 z-10 bg-[var(--color-bg-primary,#faf8f5)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
-          <details className="group bg-white rounded-xl border border-slate-200/60 p-4">
+          <HoverDetails className="group bg-white rounded-xl border border-slate-200/60 p-4">
             <summary className="list-none [&::-webkit-details-marker]:hidden flex items-center gap-4 flex-wrap sm:flex-nowrap">
               <div className="shrink-0">
                 <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-tight">执法事项目录</h1>
@@ -379,7 +380,7 @@ export default async function EnforcementPage({
                 </div>
               )}
             </div>
-          </details>
+          </HoverDetails>
         </div>
       </div>
         );

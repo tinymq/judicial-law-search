@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import HoverDetails from './HoverDetails';
 
 type FilterBarLevel = { level: string; _count: { id: number } };
 type FilterBarRegionGroup = {
@@ -55,7 +56,7 @@ export default function LawFilterBar({
 
   return (
     <div className="bg-white rounded-xl border border-slate-200/60 p-4">
-      <details className="group">
+      <HoverDetails className="group">
         <summary className="list-none [&::-webkit-details-marker]:hidden flex items-center gap-3">
           <form className="flex-1 min-w-0 relative">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -207,7 +208,7 @@ export default function LawFilterBar({
           foldLabel="个年份"
         />
       </div>
-      </details>
+      </HoverDetails>
     </div>
   );
 }
