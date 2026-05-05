@@ -130,6 +130,12 @@ model EnforcementItem {
   lawId              Int?
   /// 关联法规
   law                Law?      @relation(fields: [lawId], references: [id])
+  /// 父事项ID - 用于父子事项层级关系
+  parentId           Int?
+  /// 父事项
+  parent             EnforcementItem?  @relation("ParentChild", fields: [parentId], references: [id])
+  /// 子事项列表
+  children           EnforcementItem[] @relation("ParentChild")
 
   @@index([category])
   @@index([province])
@@ -140,6 +146,7 @@ model EnforcementItem {
   @@index([enforcementDomain])
   @@index([itemStatus])
   @@index([lawId])
+  @@index([parentId])
 }
 
 /// 条表 - 存储法规的"条"，是法规的基本层级

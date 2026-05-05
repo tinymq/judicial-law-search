@@ -120,18 +120,27 @@ export default async function EnforcementPage({
       });
     }
   }
+  // Default: only show top-level items (not children), unless searching or filtering by lawId
+  const isDetailFilter = !!params.lawId || !!params.citation || !!query;
+  if (!isDetailFilter) {
+    andConditions.push({ parentId: null });
+  }
   if (andConditions.length > 0) where.AND = andConditions;
 
   const items = await prisma.enforcementItem.findMany({
     where,
-    include: { industry: true, law: { select: { id: true, title: true, level: true } } },
+    include: {
+      industry: true,
+      law: { select: { id: true, title: true, level: true } },
+      _count: { select: { children: true } },
+    },
     orderBy: [{ sequenceNumber: 'asc' }],
     skip: (currentPage - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
   });
 
   const totalCount = await prisma.enforcementItem.count({ where });
-  const allCount = await prisma.enforcementItem.count();
+  const allCount = await prisma.enforcementItem.count({ where: { parentId: null } });
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   // 获取类别统计（跟随所有筛选条件，除类别本身）
@@ -742,13 +751,31 @@ export default async function EnforcementPage({
                           >
                             {item.name}
                           </Link>
+                          {item._count.children > 0 && (
+                            <Link
+                              href={`/enforcement/${item.id}`}
+                              className="inline-flex items-center gap-1 ml-2 px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors align-middle"
+                              title={`含 ${item._count.children} 条子事项`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                              {item._count.children} 子项
+                            </Link>
+                          )}
                         </div>
                         {/* 状态 */}
-                        {item.itemStatus === '生效' && (
-                          <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-green-500 mt-2" title="生效" />
-                        )}
-                        {item.itemStatus === '暂停' && (
-                          <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-yellow-500 mt-2" title="暂停" />
+                        {item._count.children > 0 ? (
+                          <span className="shrink-0 px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500" title="综合事项（含子事项）">
+                            综合
+                          </span>
+                        ) : (
+                          <>
+                            {item.itemStatus === '生效' && (
+                              <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-green-500 mt-2" title="生效" />
+                            )}
+                            {item.itemStatus === '暂停' && (
+                              <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-yellow-500 mt-2" title="暂停" />
+                            )}
+                          </>
                         )}
                       </div>
 

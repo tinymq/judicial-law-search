@@ -37,9 +37,10 @@ export default async function AnalyticsPage({
 
   const where: any = selectedProvince ? { province: selectedProvince } : {};
 
-  // A: Overview stats
-  const totalItems = await prisma.enforcementItem.count({ where });
+  // A: Overview stats (exclude parent items from unlinked count since they naturally have no lawId)
+  const totalItems = await prisma.enforcementItem.count({ where: { ...where, parentId: null } });
   const linkedItems = await prisma.enforcementItem.count({ where: { ...where, lawId: { not: null } } });
+  const parentCount = await prisma.enforcementItem.count({ where: { ...where, children: { some: {} } } });
   const distinctLaws = await prisma.enforcementItem.groupBy({
     by: ['lawId'],
     where: { ...where, lawId: { not: null } },

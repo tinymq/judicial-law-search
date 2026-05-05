@@ -94,6 +94,11 @@ export default async function EnforcementDetailPage({
     include: {
       law: { select: { id: true, title: true, level: true, issuingAuthority: true, lawGroupId: true, effectiveDate: true } },
       industry: true,
+      parent: { select: { id: true, name: true } },
+      children: {
+        select: { id: true, name: true, lawId: true, law: { select: { id: true, title: true } } },
+        orderBy: { sequenceNumber: 'asc' },
+      },
     },
   });
 
@@ -198,14 +203,27 @@ export default async function EnforcementDetailPage({
       </header>
 
       <section className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* 返回链接 */}
-        <Link
-          href="/enforcement"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 mb-6 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          返回执法事项目录
-        </Link>
+        {/* 返回链接 + 父事项面包屑 */}
+        <div className="flex items-center gap-2 mb-6 text-sm">
+          <Link
+            href="/enforcement"
+            className="inline-flex items-center gap-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            执法事项目录
+          </Link>
+          {item.parent && (
+            <>
+              <span className="text-slate-300">/</span>
+              <Link
+                href={`/enforcement/${item.parent.id}`}
+                className="text-slate-400 hover:text-blue-600 transition-colors truncate max-w-[300px]"
+              >
+                {item.parent.name}
+              </Link>
+            </>
+          )}
+        </div>
 
         {/* 标题区 */}
         <div className="mb-6">
@@ -225,7 +243,42 @@ export default async function EnforcementDetailPage({
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-snug">
             {item.name}
           </h1>
+          {item.children.length > 0 && (
+            <p className="text-sm text-slate-500 mt-2">
+              综合事项 · 含 <span className="font-semibold text-indigo-600">{item.children.length}</span> 条子事项
+            </p>
+          )}
         </div>
+
+        {/* 子事项列表（父事项时显示） */}
+        {item.children.length > 0 && (
+          <div className="bg-white rounded-xl border border-slate-200/60 p-5 mb-4">
+            <h2 className="text-sm font-semibold text-slate-700 mb-3">子事项清单</h2>
+            <div className="divide-y divide-slate-100">
+              {item.children.map((child, i) => (
+                <div key={child.id} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <span className="text-xs text-slate-400 tabular-nums w-5 shrink-0 pt-0.5 text-right">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      href={`/enforcement/${child.id}`}
+                      className="text-sm text-slate-800 hover:text-blue-600 transition-colors leading-snug"
+                    >
+                      {child.name}
+                    </Link>
+                    {child.law && (
+                      <Link
+                        href={`/law/${child.law.id}`}
+                        className="block text-xs text-slate-400 hover:text-blue-500 mt-0.5 truncate transition-colors"
+                      >
+                        依据: {child.law.title}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 元数据卡片 */}
         <div className="bg-white rounded-xl border border-slate-200/60 p-5 mb-4">
