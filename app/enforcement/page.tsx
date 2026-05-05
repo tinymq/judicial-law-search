@@ -32,7 +32,7 @@ const PAGE_SIZE = 50;
 export default async function EnforcementPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; level?: string; linked?: string; view?: string; lawLevel?: string; scope?: string; page?: string; lawId?: string }>;
+  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; level?: string; linked?: string; view?: string; lawLevel?: string; scope?: string; page?: string; lawId?: string; citation?: string; minRef?: string; maxRef?: string }>;
 }) {
   const params = await searchParams;
   const selectedCategory = params.category ?? '';
@@ -58,7 +58,34 @@ export default async function EnforcementPage({
   if (params.lawId) where.lawId = parseInt(params.lawId);
   else if (selectedLinked === 'no') where.lawId = null;
   else if (selectedLinked === 'yes') where.lawId = { not: null };
-  if (query) where.name = { contains: query };
+  if (query) {
+    andConditions.push({
+      OR: [
+        { name: { contains: query } },
+        { law: { is: { title: { contains: query } } } },
+      ],
+    });
+  }
+
+  // 按法规级别筛选事项（非 laws 视图下）
+  if (selectedLawLevel && viewMode !== 'laws') {
+    andConditions.push({ law: { is: { level: selectedLawLevel } } });
+  }
+
+  // 按引用模式筛选
+  if (params.citation === 'single') {
+    andConditions.push({ legalBasisText: { contains: '《' } });
+    andConditions.push({ NOT: { legalBasisText: { contains: '》《' } } });
+  } else if (params.citation === 'multi') {
+    andConditions.push({ legalBasisText: { contains: '》《' } });
+  } else if (params.citation === 'none') {
+    andConditions.push({
+      OR: [
+        { legalBasisText: null },
+        { NOT: { legalBasisText: { contains: '《' } } },
+      ],
+    });
+  }
 
   // 适用范围筛选
   if (selectedScope === '通用') {
@@ -139,9 +166,9 @@ export default async function EnforcementPage({
 
   // 法规视图：获取关联法规清单
   const lawWhere: any = { enforcementItems: { some: {} } };
-  if (selectedLawLevel) lawWhere.level = selectedLawLevel;
+  if (selectedLawLevel && viewMode === 'laws') lawWhere.level = selectedLawLevel;
 
-  const linkedLaws = viewMode === 'laws' ? await prisma.law.findMany({
+  let linkedLaws = viewMode === 'laws' ? await prisma.law.findMany({
     where: lawWhere,
     select: {
       id: true,
@@ -153,11 +180,28 @@ export default async function EnforcementPage({
     orderBy: { title: 'asc' },
   }) : [];
 
+  // minRef/maxRef: filter laws by enforcement item count
+  const minRef = parseInt(params.minRef || '0');
+  const maxRef = parseInt(params.maxRef || '0');
+  if (viewMode === 'laws' && (minRef > 0 || maxRef > 0)) {
+    linkedLaws = linkedLaws.filter(l => {
+      const c = l._count.enforcementItems;
+      if (minRef > 0 && c < minRef) return false;
+      if (maxRef > 0 && c > maxRef) return false;
+      return true;
+    });
+  }
+
   // 法规位阶统计（始终基于全部关联法规，不受 lawLevel 筛选影响）
   const allLinkedLaws = viewMode === 'laws' && selectedLawLevel ? await prisma.law.findMany({
     where: { enforcementItems: { some: {} } },
     select: { level: true },
   }) : linkedLaws;
+
+  // 从分析页透视来的新筛选参数
+  const selectedCitation = params.citation ?? '';
+  const selectedMinRef = params.minRef ?? '';
+  const selectedMaxRef = params.maxRef ?? '';
 
   // 构建筛选参数的辅助函数
   function buildQuery(overrides: Record<string, string>) {
@@ -171,6 +215,10 @@ export default async function EnforcementPage({
     if (selectedScope) p.scope = selectedScope;
     if (viewMode) p.view = viewMode;
     if (query) p.q = query;
+    if (selectedLawLevel && viewMode !== 'laws') p.lawLevel = selectedLawLevel;
+    if (selectedCitation) p.citation = selectedCitation;
+    if (selectedMinRef) p.minRef = selectedMinRef;
+    if (selectedMaxRef) p.maxRef = selectedMaxRef;
     Object.assign(p, overrides);
     // 切换筛选条件时重置页码
     if (!overrides.page) delete p.page;
@@ -182,7 +230,25 @@ export default async function EnforcementPage({
   }
 
   // 判断是否有活跃筛选
-  const hasFilters = selectedCategory || selectedIndustry || selectedProvince || selectedDomain || selectedLevel || selectedLinked || selectedScope || query;
+  const hasFilters = selectedCategory || selectedIndustry || selectedProvince || selectedDomain || selectedLevel || selectedLinked || selectedScope || query || selectedLawLevel || selectedCitation || selectedMinRef;
+
+  // 分析页透视来的筛选标签
+  const CITATION_LABELS: Record<string, string> = { single: '单法规引用', multi: '多法规引用', none: '无明确引用' };
+  const analyticsFilters: { label: string; clearHref: string }[] = [];
+  if (selectedLawLevel && viewMode !== 'laws') {
+    analyticsFilters.push({ label: `法规级别: ${selectedLawLevel}`, clearHref: buildQuery({ lawLevel: '' }) });
+  }
+  if (selectedCitation) {
+    analyticsFilters.push({ label: `引用模式: ${CITATION_LABELS[selectedCitation] || selectedCitation}`, clearHref: buildQuery({ citation: '' }) });
+  }
+  if (selectedMinRef || selectedMaxRef) {
+    const rangeLabel = selectedMaxRef ? `${selectedMinRef || 1}-${selectedMaxRef}条引用` : `${selectedMinRef}条以上引用`;
+    analyticsFilters.push({ label: `复用度: ${rangeLabel}`, clearHref: buildQuery({ minRef: '', maxRef: '' }) });
+  }
+  if (params.lawId) {
+    const lawTitle = items[0]?.law?.title;
+    analyticsFilters.push({ label: `关联法规: ${lawTitle || `#${params.lawId}`}`, clearHref: buildQuery({ lawId: '' } as any) });
+  }
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary,#faf8f5)] font-sans text-slate-900">
@@ -197,8 +263,8 @@ export default async function EnforcementPage({
             <Link href="/enforcement" className="text-sm font-semibold text-slate-900 hidden sm:inline">
               执法事项
             </Link>
-            <Link href="/enforcement/plan" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">
-              梳理方案
+            <Link href="/enforcement/analytics" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">
+              数据分析
             </Link>
             <Link href="/admin/laws" target="_blank" className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors hidden sm:inline">
               后台管理
@@ -210,7 +276,7 @@ export default async function EnforcementPage({
 
       {/* Sticky title + search + filter */}
       {(() => {
-        const activeFilterCount = [selectedProvince, selectedScope, selectedLevel, selectedDomain].filter(Boolean).length;
+        const activeFilterCount = [selectedProvince, selectedScope, selectedLevel, selectedDomain, selectedLawLevel, selectedLinked, selectedCitation].filter(Boolean).length;
         return (
       <div className="sticky top-14 z-10 bg-[var(--color-bg-primary,#faf8f5)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
@@ -240,7 +306,7 @@ export default async function EnforcementPage({
                   type="text"
                   name="q"
                   defaultValue={query}
-                  placeholder="搜索事项名称..."
+                  placeholder="搜索事项名称 / 法规名称..."
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all outline-none cursor-text"
                 />
                 {selectedCategory && <input type="hidden" name="category" value={selectedCategory} />}
@@ -379,6 +445,71 @@ export default async function EnforcementPage({
                   </div>
                 </div>
               )}
+
+              {/* 法规位阶筛选 */}
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">位阶</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex gap-2 flex-wrap">
+                    {['法律', '行政法规', '部门规章', '地方性法规', '地方政府规章'].map(ll => (
+                      <Link
+                        key={ll}
+                        href={buildQuery({ lawLevel: selectedLawLevel === ll ? '' : ll })}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                          selectedLawLevel === ll
+                            ? 'bg-slate-800 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {ll}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 关联状态筛选 */}
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-slate-400 w-12 shrink-0 pt-1.5">关联</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      { key: 'yes', label: '已关联' },
+                      { key: 'no', label: '未关联' },
+                    ].map(opt => (
+                      <Link
+                        key={opt.key}
+                        href={buildQuery({ linked: selectedLinked === opt.key ? '' : opt.key, citation: '' })}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                          selectedLinked === opt.key
+                            ? 'bg-slate-800 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt.label}
+                      </Link>
+                    ))}
+                    <span className="text-slate-200 self-center">|</span>
+                    {[
+                      { key: 'single', label: '单法规' },
+                      { key: 'multi', label: '多法规' },
+                      { key: 'none', label: '无引用' },
+                    ].map(opt => (
+                      <Link
+                        key={opt.key}
+                        href={buildQuery({ citation: selectedCitation === opt.key ? '' : opt.key, linked: '' })}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                          selectedCitation === opt.key
+                            ? 'bg-slate-800 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </HoverDetails>
         </div>
@@ -387,6 +518,21 @@ export default async function EnforcementPage({
       })()}
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-6 sm:pb-8">
+        {/* 分析页透视筛选标签 */}
+        {analyticsFilters.length > 0 && (
+          <div className="mb-4 flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-slate-400">当前筛选:</span>
+            {analyticsFilters.map(f => (
+              <span key={f.label} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                {f.label}
+                <Link href={f.clearHref} className="text-blue-400 hover:text-blue-600 ml-0.5">×</Link>
+              </span>
+            ))}
+            <Link href="/enforcement" className="text-xs text-slate-400 hover:text-slate-600 underline underline-offset-2 ml-2">
+              清除全部
+            </Link>
+          </div>
+        )}
         {/* 统计卡片 */}
         <div className="mb-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -620,9 +766,12 @@ export default async function EnforcementPage({
                         <span className="text-slate-200">·</span>
                         {/* 执法领域 */}
                         {item.enforcementDomain && (
-                          <span className="text-sm text-slate-500">
+                          <Link
+                            href={buildQuery({ domain: item.enforcementDomain })}
+                            className="text-sm text-slate-500 hover:text-blue-600 transition-colors"
+                          >
                             {item.enforcementDomain}
-                          </span>
+                          </Link>
                         )}
 
                         {item.enforcementDomain && (item.enforcementBody || levels.length > 0) && (
@@ -631,7 +780,12 @@ export default async function EnforcementPage({
 
                         {/* 执法主体 */}
                         {item.enforcementBody && (
-                          <span className="text-sm text-slate-500">{item.enforcementBody}</span>
+                          <Link
+                            href={buildQuery({ domain: item.enforcementDomain || '', q: item.enforcementBody })}
+                            className="text-sm text-slate-500 hover:text-blue-600 transition-colors"
+                          >
+                            {item.enforcementBody}
+                          </Link>
                         )}
 
                         {item.enforcementBody && levels.length > 0 && (
