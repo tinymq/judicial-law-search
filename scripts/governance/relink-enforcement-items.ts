@@ -1,7 +1,17 @@
 /**
  * 重新关联未匹配的执法事项与法规
  *
- * 对 lawId 为 null 但有 legalBasisText 的记录，用更宽松的策略匹配法规。
+ * 对 lawId 为 null 但有 legalBasisText 的记录，用多层策略匹配法规。
+ *
+ * 提取策略：
+ *   1. 从《》书名号中提取法规名
+ *   2. 从文本首行提取法规名（去除年份后缀、_x000d_等）
+ *
+ * 匹配策略：
+ *   1. 精确匹配
+ *   2. 规范化匹配（去"中华人民共和国"前缀 + 去年份后缀）
+ *   3. 包含匹配（双向）
+ *   4. 关键词重叠（≥80%）
  *
  * 用法：
  *   npx tsx scripts/governance/relink-enforcement-items.ts          # 试运行
@@ -13,16 +23,47 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const APPLY = process.argv.includes('--apply');
 
-// 从执法依据文本中提取《》内的法规名称
+// 从执法依据文本中提取法规名称（多种模式）
 function extractLawNames(text: string): string[] {
-  const cleaned = text.replace(/\n/g, '');
-  const matches = cleaned.match(/《([^》]+)》/g);
-  if (!matches) return [];
   const names = new Set<string>();
-  for (const m of matches) {
-    const name = m.slice(1, -1).replace(/\s+/g, '').trim();
-    if (name.length > 3) names.add(name);
+
+  // 模式1：《》书名号内的法规名
+  const cleaned = text.replace(/\n/g, '');
+  const bracketMatches = cleaned.match(/《([^》]+)》/g);
+  if (bracketMatches) {
+    for (const m of bracketMatches) {
+      const name = m.slice(1, -1).replace(/\s+/g, '').trim();
+      if (name.length > 3) names.add(name);
+    }
   }
+
+  // 模式2：首行作为法规名（去掉_x000d_、年份后缀、条文引用）
+  const firstLine = text
+    .split(/\n/)[0]
+    .replace(/_x000d_/g, '')
+    .replace(/\r/g, '')
+    .replace(/第[一二三四五六七八九十百千\d]+条.*/, '')
+    .trim();
+  if (firstLine.length > 3 && firstLine.length < 80) {
+    // 去掉年份后缀得到核心法规名
+    const coreName = firstLine
+      .replace(/[\(（]\d{4}年?[^)）]*[\)）]/g, '')
+      .replace(/[\(（][^)）]*修[正订改][^)）]*[\)）]/g, '')
+      .trim();
+    if (coreName.length > 3) names.add(coreName);
+    // 也保留含年份的完整形式做精确匹配
+    if (firstLine !== coreName && firstLine.length > 3) names.add(firstLine);
+  }
+
+  // 模式3：文本中"依据XXX第X条"模式
+  const depMatches = text.match(/依据([^第\n]{4,40})第/g);
+  if (depMatches) {
+    for (const m of depMatches) {
+      const name = m.replace(/^依据/, '').replace(/第$/, '').replace(/《|》/g, '').trim();
+      if (name.length > 3) names.add(name);
+    }
+  }
+
   return Array.from(names);
 }
 
@@ -98,10 +139,17 @@ async function main() {
         break;
       }
 
-      // 策略3：包含匹配（数据库标题包含引用名，或引用名包含数据库标题）
+      // 策略3：包含匹配（带省份校验，避免跨省误匹配）
       for (const law of dbLaws) {
         const normTitle = normalize(law.title);
+        if (normTitle === normCited) continue; // 已被策略2覆盖
         if (normTitle.includes(normCited) || normCited.includes(normTitle)) {
+          // 防止跨省误匹配：如果引用名含省级前缀，数据库标题必须也含该前缀
+          const citedProvince = cited.match(/^([一-龥]{2,6}(?:省|市|自治区))/)?.[1];
+          const lawProvince = law.title.match(/^(?:中华人民共和国)?([一-龥]{2,6}(?:省|市|自治区))/)?.[1];
+          if (citedProvince && lawProvince && citedProvince !== lawProvince) continue;
+          // 防止"浙江省X条例"匹配到"中华人民共和国X条例"
+          if (citedProvince && !lawProvince && law.title.startsWith('中华人民共和国')) continue;
           foundLawId = law.id;
           matchMethod = `包含 → ${law.title}`;
           matchedCitation = cited;

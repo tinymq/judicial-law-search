@@ -52,6 +52,7 @@ prisma/*.db
 # data files
 /laws/
 laws-exported/
+scripts/data/
 
 # generated mapping files
 title-to-lawid-mapping.json

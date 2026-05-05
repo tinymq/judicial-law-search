@@ -8,6 +8,7 @@
  */
 export const LEVEL_ORDER = [
   '法律',
+  '法律修正案',
   '法律解释',
   '有关法律问题和重大问题的决定',
   '行政法规',
@@ -24,6 +25,7 @@ export const LEVEL_ORDER = [
 
 export const LEVEL_OPTIONS = [
   '法律',
+  '法律修正案',
   '法律解释',
   '有关法律问题和重大问题的决定',
   '行政法规',
