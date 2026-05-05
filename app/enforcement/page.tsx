@@ -836,9 +836,9 @@ export default async function EnforcementPage({
                             </Link>
                           );
                           if (uniqueRefs.length === 1 || item.law) return (
-                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-50 text-slate-500 border border-slate-100">
+                            <Link href={buildQuery({ citation: 'single' })} className="px-2 py-0.5 rounded text-xs font-medium bg-slate-50 text-slate-500 border border-slate-100 hover:bg-slate-100 transition-colors">
                               单法规
-                            </span>
+                            </Link>
                           );
                           return null;
                         })()}
@@ -868,27 +868,41 @@ export default async function EnforcementPage({
                         )}
 
                         {/* 来源法规 */}
-                        {item.law ? (
-                          <>
-                            <span className="text-slate-200">·</span>
-                            <Link
-                              href={`/law/${item.law.id}`}
-                              className="text-sm text-blue-500/70 hover:text-blue-600 truncate max-w-[240px] sm:max-w-[360px]"
-                            >
-                              {item.law.title}
-                            </Link>
-                          </>
-                        ) : item.legalBasisText ? (() => {
-                          const match = item.legalBasisText!.match(/《([^》]+)》/);
-                          return match ? (
+                        {(() => {
+                          const textRefs = item.legalBasisText?.match(/《([^》]+)》/g)?.map(s => s.slice(1, -1)) || [];
+                          const uniqueNames = [...new Set(textRefs)];
+                          const linkedTitle = item.law?.title;
+                          if (uniqueNames.length === 0 && !item.law) return null;
+                          if (uniqueNames.length <= 1 && item.law) {
+                            return (
+                              <>
+                                <span className="text-slate-200">·</span>
+                                <Link href={`/law/${item.law.id}`} className="text-sm text-blue-500/70 hover:text-blue-600 truncate max-w-[240px] sm:max-w-[360px]">
+                                  {item.law.title}
+                                </Link>
+                              </>
+                            );
+                          }
+                          return (
                             <>
                               <span className="text-slate-200">·</span>
-                              <span className="text-sm text-orange-500 truncate max-w-[240px] sm:max-w-[360px]" title="数据库中暂无此法规，待导入后关联">
-                                {match[1]}（待关联）
-                              </span>
+                              <div className="flex gap-1.5 flex-wrap">
+                                {uniqueNames.map((name, i) => {
+                                  const isLinked = linkedTitle && (name === linkedTitle || linkedTitle.includes(name) || name.includes(linkedTitle));
+                                  return isLinked && item.law ? (
+                                    <Link key={i} href={`/law/${item.law.id}`} className="text-sm text-blue-500/70 hover:text-blue-600">
+                                      {name}
+                                    </Link>
+                                  ) : (
+                                    <span key={i} className="text-sm text-slate-400">
+                                      {name}
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             </>
-                          ) : null;
-                        })() : null}
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
