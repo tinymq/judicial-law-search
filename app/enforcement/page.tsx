@@ -147,6 +147,9 @@ export default async function EnforcementPage({
   const totalCount = await prisma.enforcementItem.count({ where });
   const allCount = await prisma.enforcementItem.count({ where: { parentId: null } });
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const parentChildCount = params.type === 'parent'
+    ? await prisma.enforcementItem.count({ where: { ...(selectedProvince ? { province: selectedProvince } : {}), parentId: { not: null } } })
+    : 0;
 
   // 获取类别统计（跟随所有筛选条件，除类别本身）
   const categoryStatsWhere = { ...where };
@@ -245,7 +248,7 @@ export default async function EnforcementPage({
   }
 
   // 判断是否有活跃筛选
-  const hasFilters = selectedCategory || selectedIndustry || selectedProvince || selectedDomain || selectedLevel || selectedLinked || selectedScope || query || selectedLawLevel || selectedCitation || selectedMinRef;
+  const hasFilters = selectedCategory || selectedIndustry || selectedProvince || selectedDomain || selectedLevel || selectedLinked || selectedScope || query || selectedLawLevel || selectedCitation || selectedMinRef || params.type;
 
   // 分析页透视来的筛选标签
   const CITATION_LABELS: Record<string, string> = { single: '单法规引用', multi: '多法规引用', none: '无明确引用' };
@@ -307,6 +310,9 @@ export default async function EnforcementPage({
                   {hasFilters && totalCount !== allCount && (
                     <span className="ml-1">
                       · 筛选 <span className="font-semibold text-blue-600">{totalCount}</span> 项
+                      {parentChildCount > 0 && (
+                        <span className="text-slate-400">，共 {parentChildCount} 子项</span>
+                      )}
                     </span>
                   )}
                   {hasFilters && (

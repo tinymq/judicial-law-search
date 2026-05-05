@@ -33,7 +33,7 @@ export default function HoverDetails({
       onMouseLeave={() => setIsOpen(false)}
       onClick={(e) => {
         const summary = (e.target as HTMLElement).closest('summary');
-        if (summary) e.preventDefault();
+        if (summary && summary.parentElement === ref.current) e.preventDefault();
       }}
     >
       {children}
