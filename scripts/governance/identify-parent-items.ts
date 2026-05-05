@@ -51,21 +51,26 @@ async function main() {
       take: 300,
     });
 
-    let childCount = 0;
+    const childIds: number[] = [];
+    let groupLawId: number | null = null;
     for (const item of nextItems) {
-      // Must be consecutive
-      if (item.sequenceNumber !== parent.sequenceNumber + childCount + 1) break;
-      // Must have law reference (either lawId or legalBasisText)
+      if (item.sequenceNumber !== parent.sequenceNumber + childIds.length + 1) break;
       if (!item.lawId && (!item.legalBasisText || item.legalBasisText === '')) break;
-      updates.push({ childId: item.id, parentId: parent.id });
-      childCount++;
+      if (item.lawId) {
+        if (groupLawId === null) groupLawId = item.lawId;
+        else if (item.lawId !== groupLawId) break;
+      }
+      childIds.push(item.id);
     }
 
-    if (childCount > 0) {
+    if (childIds.length >= 2) {
       totalParents++;
-      totalChildren += childCount;
+      totalChildren += childIds.length;
+      for (const childId of childIds) {
+        updates.push({ childId, parentId: parent.id });
+      }
       if (totalParents <= 10) {
-        console.log(`[父] #${parent.id} (${childCount}子) ${parent.province} ${parent.enforcementDomain} | ${parent.name.substring(0, 50)}`);
+        console.log(`[父] #${parent.id} (${childIds.length}子) ${parent.province} ${parent.enforcementDomain} | ${parent.name.substring(0, 50)}`);
       }
     }
   }
