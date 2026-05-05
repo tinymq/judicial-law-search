@@ -14,6 +14,14 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const APPLY = process.argv.includes('--apply');
 
+function extractLawName(text: string | null): string {
+  if (!text) return '';
+  // First line of legalBasisText is the law name (before \r\n or 第X条)
+  const firstLine = text.split(/[\r\n]+/)[0].replace(/_x000d_$/, '').trim();
+  // Remove trailing article references like "第XX条..."
+  return firstLine.replace(/\s*第[一-鿿\d]+条.*$/, '').trim();
+}
+
 async function main() {
   console.log(`=== 识别父子事项关系 ===`);
   console.log(`模式: ${APPLY ? '正式写入' : '试运行'}\n`);
@@ -52,13 +60,15 @@ async function main() {
     });
 
     const childIds: number[] = [];
-    let groupLawId: number | null = null;
+    let groupLawName: string | null = null;
     for (const item of nextItems) {
       if (item.sequenceNumber !== parent.sequenceNumber + childIds.length + 1) break;
       if (!item.lawId && (!item.legalBasisText || item.legalBasisText === '')) break;
-      if (item.lawId) {
-        if (groupLawId === null) groupLawId = item.lawId;
-        else if (item.lawId !== groupLawId) break;
+      // Group by law NAME from legalBasisText (more reliable than lawId)
+      const lawName = extractLawName(item.legalBasisText);
+      if (lawName) {
+        if (groupLawName === null) groupLawName = lawName;
+        else if (lawName !== groupLawName) break;
       }
       childIds.push(item.id);
     }

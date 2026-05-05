@@ -32,7 +32,7 @@ const PAGE_SIZE = 50;
 export default async function EnforcementPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; level?: string; linked?: string; view?: string; lawLevel?: string; scope?: string; page?: string; lawId?: string; citation?: string; minRef?: string; maxRef?: string }>;
+  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; level?: string; linked?: string; view?: string; lawLevel?: string; scope?: string; page?: string; lawId?: string; citation?: string; minRef?: string; maxRef?: string; type?: string }>;
 }) {
   const params = await searchParams;
   const selectedCategory = params.category ?? '';
@@ -120,10 +120,15 @@ export default async function EnforcementPage({
       });
     }
   }
-  // Default: only show top-level items (not children), unless searching or filtering by lawId
-  const isDetailFilter = !!params.lawId || !!params.citation || !!query;
-  if (!isDetailFilter) {
-    andConditions.push({ parentId: null });
+  // type=parent: only show parent items (items with children)
+  if (params.type === 'parent') {
+    andConditions.push({ children: { some: {} } });
+  } else {
+    // Default: only show top-level items (not children), unless searching or filtering by lawId
+    const isDetailFilter = !!params.lawId || !!params.citation || !!query;
+    if (!isDetailFilter) {
+      andConditions.push({ parentId: null });
+    }
   }
   if (andConditions.length > 0) where.AND = andConditions;
 
@@ -228,6 +233,7 @@ export default async function EnforcementPage({
     if (selectedCitation) p.citation = selectedCitation;
     if (selectedMinRef) p.minRef = selectedMinRef;
     if (selectedMaxRef) p.maxRef = selectedMaxRef;
+    if (params.type) p.type = params.type;
     Object.assign(p, overrides);
     // 切换筛选条件时重置页码
     if (!overrides.page) delete p.page;
@@ -257,6 +263,9 @@ export default async function EnforcementPage({
   if (params.lawId) {
     const lawTitle = items[0]?.law?.title;
     analyticsFilters.push({ label: `关联法规: ${lawTitle || `#${params.lawId}`}`, clearHref: buildQuery({ lawId: '' } as any) });
+  }
+  if (params.type === 'parent') {
+    analyticsFilters.push({ label: '综合事项（含子事项）', clearHref: buildQuery({ type: '' } as any) });
   }
 
   return (
@@ -516,6 +525,17 @@ export default async function EnforcementPage({
                         {opt.label}
                       </Link>
                     ))}
+                    <span className="text-slate-200 self-center">|</span>
+                    <Link
+                      href={buildQuery({ type: params.type === 'parent' ? '' : 'parent', linked: '', citation: '' } as any)}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                        params.type === 'parent'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      综合事项
+                    </Link>
                   </div>
                 </div>
               </div>

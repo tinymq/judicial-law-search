@@ -7,10 +7,12 @@ interface Props {
   linkedItems: number;
   distinctLawCount: number;
   totalLaws: number;
+  parentCount: number;
+  childCount: number;
   province: string;
 }
 
-export default function OverviewCards({ totalItems, linkedItems, distinctLawCount, totalLaws, province }: Props) {
+export default function OverviewCards({ totalItems, linkedItems, distinctLawCount, totalLaws, parentCount, childCount, province }: Props) {
   const linkRate = totalItems > 0 ? ((linkedItems / totalItems) * 100).toFixed(1) : '0';
   const pq = province ? `&province=${province}` : '';
 
@@ -19,10 +21,11 @@ export default function OverviewCards({ totalItems, linkedItems, distinctLawCoun
     { label: '已关联法规', value: linkedItems.toLocaleString(), sub: `关联率 ${linkRate}%`, color: 'text-blue-600', href: `/enforcement?linked=yes${pq}` },
     { label: '涉及法规数', value: distinctLawCount.toLocaleString(), sub: `库内共 ${totalLaws.toLocaleString()} 部`, color: 'text-violet-600', href: `/enforcement?view=laws${pq}` },
     { label: '未关联事项', value: (totalItems - linkedItems).toLocaleString(), color: 'text-orange-600', href: `/enforcement?linked=no${pq}` },
+    ...(parentCount > 0 ? [{ label: '综合事项', value: parentCount.toLocaleString(), sub: `含 ${childCount} 条子事项`, color: 'text-indigo-600', href: `/enforcement?type=parent${pq}` }] : []),
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
       {cards.map(card => (
         <Link
           key={card.label}

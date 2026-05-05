@@ -41,6 +41,7 @@ export default async function AnalyticsPage({
   const totalItems = await prisma.enforcementItem.count({ where: { ...where, parentId: null } });
   const linkedItems = await prisma.enforcementItem.count({ where: { ...where, lawId: { not: null } } });
   const parentCount = await prisma.enforcementItem.count({ where: { ...where, children: { some: {} } } });
+  const childCount = await prisma.enforcementItem.count({ where: { ...where, parentId: { not: null } } });
   const distinctLaws = await prisma.enforcementItem.groupBy({
     by: ['lawId'],
     where: { ...where, lawId: { not: null } },
@@ -207,6 +208,8 @@ export default async function AnalyticsPage({
           linkedItems={linkedItems}
           distinctLawCount={distinctLaws.length}
           totalLaws={totalLaws}
+          parentCount={parentCount}
+          childCount={childCount}
           province={selectedProvince}
         />
 
