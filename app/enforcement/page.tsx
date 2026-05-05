@@ -810,20 +810,32 @@ export default async function EnforcementPage({
                         }`}>
                           {scope}
                         </span>
-                        <span className="text-slate-200">·</span>
-                        {/* 执法领域 */}
+                        {/* 执法领域标签 */}
                         {item.enforcementDomain && (
                           <Link
                             href={buildQuery({ domain: item.enforcementDomain })}
-                            className="text-sm text-slate-500 hover:text-blue-600 transition-colors"
+                            className="px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors"
                           >
                             {item.enforcementDomain}
                           </Link>
                         )}
-
-                        {item.enforcementDomain && (item.enforcementBody || levels.length > 0) && (
-                          <span className="text-slate-200">·</span>
-                        )}
+                        {/* 单/多法规标签 */}
+                        {(() => {
+                          const refs = item.legalBasisText?.match(/《[^》]+》/g);
+                          if (!refs && !item.law) return null;
+                          const uniqueRefs = refs ? [...new Set(refs)] : [];
+                          if (uniqueRefs.length > 1) return (
+                            <Link href={buildQuery({ citation: 'multi' })} className="px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100 transition-colors">
+                              多法规
+                            </Link>
+                          );
+                          if (uniqueRefs.length === 1 || item.law) return (
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-50 text-slate-500 border border-slate-100">
+                              单法规
+                            </span>
+                          );
+                          return null;
+                        })()}
 
                         {/* 执法主体 */}
                         {item.enforcementBody && (
@@ -833,10 +845,6 @@ export default async function EnforcementPage({
                           >
                             {item.enforcementBody}
                           </Link>
-                        )}
-
-                        {item.enforcementBody && levels.length > 0 && (
-                          <span className="text-slate-200">·</span>
                         )}
 
                         {/* 层级标签 */}
