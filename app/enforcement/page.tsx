@@ -151,6 +151,31 @@ export default async function EnforcementPage({
     ? await prisma.enforcementItem.count({ where: { ...(selectedProvince ? { province: selectedProvince } : {}), parentId: { not: null } } })
     : 0;
 
+  // 批量匹配当前页所有《法规名》到法规库
+  const allRefNames = new Set<string>();
+  for (const item of items) {
+    const refs = item.legalBasisText?.match(/《([^》]+)》/g);
+    if (refs) refs.forEach(r => allRefNames.add(r.slice(1, -1)));
+  }
+  const lawLookup: Record<string, { id: number; title: string }> = {};
+  if (allRefNames.size > 0) {
+    // 精确匹配
+    const matchedLaws = await prisma.law.findMany({
+      where: { title: { in: [...allRefNames] } },
+      select: { id: true, title: true },
+    });
+    for (const law of matchedLaws) lawLookup[law.title] = law;
+    // 模糊匹配：引用名可能是简称（"广告法"→"中华人民共和国广告法"）或不含年份后缀
+    const unmatched = [...allRefNames].filter(n => !lawLookup[n] && n.length >= 3);
+    if (unmatched.length > 0) {
+      const allLaws = await prisma.law.findMany({ select: { id: true, title: true } });
+      for (const name of unmatched) {
+        const found = allLaws.find(l => l.title.startsWith(name) || l.title.endsWith(name));
+        if (found) lawLookup[name] = found;
+      }
+    }
+  }
+
   // 获取类别统计（跟随所有筛选条件，除类别本身）
   const categoryStatsWhere = { ...where };
   delete categoryStatsWhere.category;
@@ -871,8 +896,8 @@ export default async function EnforcementPage({
                         {(() => {
                           const textRefs = item.legalBasisText?.match(/《([^》]+)》/g)?.map(s => s.slice(1, -1)) || [];
                           const uniqueNames = [...new Set(textRefs)];
-                          const linkedTitle = item.law?.title;
                           if (uniqueNames.length === 0 && !item.law) return null;
+                          // 单法规且已关联：直接展示链接
                           if (uniqueNames.length <= 1 && item.law) {
                             return (
                               <>
@@ -888,13 +913,13 @@ export default async function EnforcementPage({
                               <span className="text-slate-200">·</span>
                               <div className="flex gap-1.5 flex-wrap">
                                 {uniqueNames.map((name, i) => {
-                                  const isLinked = linkedTitle && (name === linkedTitle || linkedTitle.includes(name) || name.includes(linkedTitle));
-                                  return isLinked && item.law ? (
-                                    <Link key={i} href={`/law/${item.law.id}`} className="text-sm text-blue-500/70 hover:text-blue-600">
+                                  const matched = lawLookup[name];
+                                  return matched ? (
+                                    <Link key={i} href={`/law/${matched.id}`} className="text-sm text-blue-500/70 hover:text-blue-600">
                                       {name}
                                     </Link>
                                   ) : (
-                                    <span key={i} className="text-sm text-slate-400">
+                                    <span key={i} className="text-sm text-orange-400" title="库内暂无此法规">
                                       {name}
                                     </span>
                                   );
