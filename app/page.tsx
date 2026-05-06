@@ -8,6 +8,7 @@ import LawFilterBar from '@/components/LawFilterBar';
 import LawResultCard from '@/components/LawResultCard';
 import RecentViewsDropdown from '@/components/RecentViewsDropdown';
 import Pagination from '@/components/Pagination';
+import PageSizeSelect from '@/components/PageSizeSelect';
 import { sortLevelsByOrder } from '@/src/lib/level-utils';
 import type { Metadata } from 'next';
 import { ADMIN_CONFIG } from './admin/admin-config';
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
   title: '首页 - 执法监督法规查',
 };
 
-const PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 50;
 
 type SearchLaw = {
   id: number;
@@ -146,7 +147,7 @@ function scoreLawTitleMatch(title: string, query: string) {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; industry?: string; level?: string; year?: string; region?: string; status?: string; page?: string; view?: string }>;
+  searchParams: Promise<{ q?: string; industry?: string; level?: string; year?: string; region?: string; status?: string; page?: string; view?: string; pageSize?: string }>;
 }) {
   const params = await searchParams;
   const query = (params.q ?? '').trim();
@@ -156,6 +157,7 @@ export default async function Home({
   const selectedRegion = params.region ?? '';
   const selectedStatus = params.status ?? '';
   const currentPage = Math.max(1, parseInt(params.page || '1', 10));
+  const pageSize = [50, 100, 200].includes(Number(params.pageSize)) ? Number(params.pageSize) : 50;
   const viewMode = params.view ?? 'modern';
 
   const urlParams = new URLSearchParams();
@@ -407,19 +409,19 @@ export default async function Home({
     titleMatchCount = scoredTitleMatches.length;
     contentMatchCount = scoredContentMatches.length;
     totalCount = allResults.length;
-    totalPages = Math.ceil(totalCount / PAGE_SIZE);
+    totalPages = Math.ceil(totalCount / pageSize);
 
-    laws = allResults.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    laws = allResults.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   } else {
     totalCount = await prisma.law.count({ where });
-    totalPages = Math.ceil(totalCount / PAGE_SIZE);
+    totalPages = Math.ceil(totalCount / pageSize);
 
     laws = await prisma.law.findMany({
       where,
       select: selectFields,
       orderBy: [{ effectiveDate: 'desc' }, { promulgationDate: 'desc' }],
-      skip: (currentPage - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
     }) as SearchLaw[];
   }
 
@@ -498,6 +500,7 @@ export default async function Home({
     if (selectedStatus) p.status = selectedStatus;
     if (query) p.q = query;
     if (viewMode === 'classic') p.view = 'classic';
+    if (pageSize !== DEFAULT_PAGE_SIZE) p.pageSize = String(pageSize);
     Object.assign(p, overrides);
     if (!overrides.page) delete p.page;
     for (const k of Object.keys(p)) { if (!p[k]) delete p[k]; }
@@ -856,6 +859,19 @@ export default async function Home({
             {hasFilters && (
               <Link href="/" className="text-sm text-slate-400 hover:text-slate-600 underline underline-offset-2">重置筛选</Link>
             )}
+            <PageSizeSelect
+              pageSize={pageSize}
+              basePath="/"
+              searchParams={{
+                q: query,
+                industry: selectedIndustry,
+                level: selectedLevel,
+                year: selectedYear,
+                region: selectedRegion,
+                status: selectedStatus,
+                ...(viewMode === 'classic' ? { view: 'classic' } : {}),
+              }}
+            />
             <RecentViewsDropdown />
           </div>
         </div>
@@ -876,7 +892,7 @@ export default async function Home({
               <LawResultCard
                 key={law.id}
                 law={law}
-                index={(currentPage - 1) * PAGE_SIZE + i + 1}
+                index={(currentPage - 1) * pageSize + i + 1}
                 industryName={lawIndustryNames.get(law.id)}
                 resolvedStatus={resolveStatus(law.status, law.effectiveDate)}
               />

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import SiteHeader from '@/components/SiteHeader';
 import ThemeToggle from '@/components/ThemeToggle';
 import Pagination from '@/components/Pagination';
+import PageSizeSelect from '@/components/PageSizeSelect';
 import HoverDetails from '@/components/HoverDetails';
 import { prisma } from '@/src/lib/db';
 import { ENFORCEMENT_CATEGORIES } from '@/src/lib/industry-config';
@@ -27,13 +28,12 @@ const PROVINCE_NAMES: Record<string, string> = Object.fromEntries(
   PROVINCE_OPTIONS.map(p => [p.code, p.label])
 );
 
-// 分页配置
-const PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 50;
 
 export default async function EnforcementPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; body?: string; level?: string; linked?: string; view?: string; lawLevel?: string; scope?: string; page?: string; lawId?: string; citation?: string; minRef?: string; maxRef?: string; type?: string }>;
+  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; body?: string; level?: string; linked?: string; view?: string; lawLevel?: string; scope?: string; page?: string; pageSize?: string; lawId?: string; citation?: string; minRef?: string; maxRef?: string; type?: string }>;
 }) {
   const params = await searchParams;
   const selectedCategory = params.category ?? '';
@@ -48,6 +48,7 @@ export default async function EnforcementPage({
   const selectedScope = params.scope ?? '';
   const query = params.q ?? '';
   const currentPage = Math.max(1, parseInt(params.page || '1', 10));
+  const pageSize = [50, 100, 200].includes(Number(params.pageSize)) ? Number(params.pageSize) : 50;
 
   // 构建查询条件
   const where: any = {};
@@ -143,13 +144,13 @@ export default async function EnforcementPage({
       _count: { select: { children: true } },
     },
     orderBy: [{ sequenceNumber: 'asc' }],
-    skip: (currentPage - 1) * PAGE_SIZE,
-    take: PAGE_SIZE,
+    skip: (currentPage - 1) * pageSize,
+    take: pageSize,
   });
 
   const totalCount = await prisma.enforcementItem.count({ where });
   const allCount = await prisma.enforcementItem.count({ where: { parentId: null } });
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const totalPages = Math.ceil(totalCount / pageSize);
   const parentChildCount = params.type === 'parent'
     ? await prisma.enforcementItem.count({ where: { ...(selectedProvince ? { province: selectedProvince } : {}), parentId: { not: null } } })
     : 0;
@@ -277,6 +278,7 @@ export default async function EnforcementPage({
     if (selectedMinRef) p.minRef = selectedMinRef;
     if (selectedMaxRef) p.maxRef = selectedMaxRef;
     if (params.type) p.type = params.type;
+    if (pageSize !== DEFAULT_PAGE_SIZE) p.pageSize = String(pageSize);
     Object.assign(p, overrides);
     // 切换筛选条件时重置页码
     if (!overrides.page) delete p.page;
@@ -787,6 +789,25 @@ export default async function EnforcementPage({
                 >
                   {viewMode === 'laws' ? '返回事项列表' : '查看法规清单'}
                 </Link>
+                <span className="text-slate-200">|</span>
+                <PageSizeSelect
+                  pageSize={pageSize}
+                  basePath="/enforcement"
+                  searchParams={{
+                    category: selectedCategory,
+                    province: selectedProvince,
+                    domain: selectedDomain,
+                    body: selectedBody,
+                    level: selectedLevel,
+                    linked: selectedLinked,
+                    scope: selectedScope,
+                    q: query,
+                    ...(viewMode ? { view: viewMode } : {}),
+                    ...(selectedLawLevel ? { lawLevel: selectedLawLevel } : {}),
+                    ...(selectedCitation ? { citation: selectedCitation } : {}),
+                    ...(params.type ? { type: params.type } : {}),
+                  }}
+                />
               </div>
             </div>
 
