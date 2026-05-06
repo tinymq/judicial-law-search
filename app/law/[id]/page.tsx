@@ -84,14 +84,16 @@ export default async function LawDetail({
     status: true,
   } as const;
 
-  const lawHistory = await prisma.law.findMany({
-    where: {
-      lawGroupId: law.lawGroupId,
-      id: { not: law.id }
-    },
-    orderBy: { effectiveDate: 'desc' },
-    select: lawHistorySelect,
-  });
+  const lawHistory = law.lawGroupId
+    ? await prisma.law.findMany({
+        where: {
+          lawGroupId: law.lawGroupId,
+          id: { not: law.id }
+        },
+        orderBy: { effectiveDate: 'desc' },
+        select: lawHistorySelect,
+      })
+    : [];
 
   // 查询指向本法（含同组所有版本）的修改决定
   const groupMemberIds = new Set([law.id, ...lawHistory.map(h => h.id)]);
