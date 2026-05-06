@@ -29,7 +29,7 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   },
   {
     code: "01", name: "外交",
-    authorities: ["外交部"],
+    authorities: ["外交部", "国际发展合作署"],
     titleKeywords: ["外交", "领事", "使馆", "条约", "缔约"],
   },
   {
@@ -39,8 +39,8 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   },
   {
     code: "03", name: "发展和改革",
-    authorities: ["发展和改革委员会", "发改委"],
-    titleKeywords: ["发展规划", "价格", "收费", "物价", "招标投标", "节能", "循环经济", "清洁生产", "能源"],
+    authorities: ["发展和改革委员会", "发改委", "发展改革委", "国家发展改革委"],
+    titleKeywords: ["发展规划", "价格", "收费", "物价", "招标投标", "节能", "循环经济", "清洁生产", "能源", "营商环境", "民营经济"],
   },
   {
     code: "04", name: "教育",
@@ -49,38 +49,38 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   },
   {
     code: "05", name: "科学技术",
-    authorities: ["科学技术部", "科技厅"],
-    titleKeywords: ["科学技术", "科技进步", "科技成果", "科普"],
+    authorities: ["科学技术部", "科技厅", "科技部"],
+    titleKeywords: ["科学技术", "科技进步", "科技成果", "科普", "科技创新", "技术市场"],
   },
   {
     code: "06", name: "工业和信息化",
-    authorities: ["工业和信息化部", "工信部", "工信厅"],
-    titleKeywords: ["工业", "信息化", "电信", "通信", "无线电", "电磁", "互联网", "网络安全", "数据安全", "电子签名", "无障碍"],
+    authorities: ["工业和信息化部", "工信部", "工信厅", "网信办"],
+    titleKeywords: ["工业", "信息化", "电信", "通信", "无线电", "电磁", "互联网", "网络安全", "数据安全", "电子签名", "无障碍", "个人信息"],
   },
   {
     code: "07", name: "民族事务",
-    authorities: ["民族事务委员会"],
-    titleKeywords: ["民族", "少数民族", "民族区域自治"],
+    authorities: ["民族事务委员会", "宗教"],
+    titleKeywords: ["民族", "少数民族", "民族区域自治", "宗教"],
   },
   {
     code: "08", name: "公安",
     authorities: ["公安部", "公安厅", "公安局"],
-    titleKeywords: ["公安", "治安", "出入境", "户籍", "身份证", "居住证", "枪支", "爆炸物", "危险化学品", "消防", "道路交通", "交通安全", "机动车", "驾驶"],
+    titleKeywords: ["公安", "治安", "出入境", "户籍", "身份证", "居住证", "枪支", "爆炸物", "危险化学品", "消防", "道路交通", "交通安全", "机动车", "驾驶", "警察", "见义勇为", "养犬", "国籍"],
   },
   {
     code: "09", name: "国家安全",
-    authorities: ["国家安全部"],
+    authorities: ["国家安全部", "保密局"],
     titleKeywords: ["国家安全", "反间谍", "反恐", "保密"],
   },
   {
     code: "10", name: "民政",
     authorities: ["民政部", "民政厅", "民政局"],
-    titleKeywords: ["民政", "社会团体", "基金会", "社会组织", "社会救助", "殡葬", "婚姻", "收养", "地名", "行政区域", "社区", "村民", "居民", "社会福利", "慈善", "养老", "未成年人保护", "老年人"],
+    titleKeywords: ["民政", "社会团体", "基金会", "社会组织", "社会救助", "殡葬", "婚姻", "收养", "地名", "行政区域", "社区", "村民", "居民", "社会福利", "慈善", "养老", "未成年人保护", "老年人", "捐赠", "公益", "华侨", "妇女权益"],
   },
   {
     code: "11", name: "司法",
     authorities: ["司法部", "司法厅", "司法局"],
-    titleKeywords: ["司法", "律师", "公证", "仲裁", "调解", "法律援助", "法律服务", "司法鉴定", "监狱", "社区矫正", "法治", "行政复议", "行政诉讼", "法规规章备案", "行政执法"],
+    titleKeywords: ["司法", "律师", "公证", "仲裁", "调解", "法律援助", "法律服务", "司法鉴定", "监狱", "社区矫正", "法治", "行政复议", "行政诉讼", "法规规章备案", "行政执法", "检察院", "法院", "刑法", "政务处分"],
   },
   {
     code: "12", name: "财政",
@@ -89,13 +89,13 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   },
   {
     code: "13", name: "人力资源和社会保障",
-    authorities: ["人力资源和社会保障部", "人社厅", "人社局"],
+    authorities: ["人力资源和社会保障部", "人社厅", "人社局", "人力资源社会保障", "劳动和社会保障", "劳动部"],
     titleKeywords: ["劳动", "就业", "人力资源", "社会保险", "工伤", "劳动合同", "工资", "社会保障", "职业技能", "职业资格"],
   },
   {
     code: "14", name: "自然资源",
     authorities: ["自然资源部", "自然资源厅", "国土资源"],
-    titleKeywords: ["自然资源", "土地", "矿产", "国土", "测绘", "地质", "不动产", "海域", "海岛"],
+    titleKeywords: ["自然资源", "土地", "矿产", "国土", "测绘", "地质", "不动产", "海域", "海岛", "深海"],
   },
   {
     code: "15", name: "生态环境",
@@ -104,13 +104,13 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   },
   {
     code: "16", name: "住房和城乡建设",
-    authorities: ["住房和城乡建设部", "住建厅", "住建局", "建设厅"],
+    authorities: ["住房和城乡建设部", "住建厅", "住建局", "建设厅", "建设部", "住房城乡建设部"],
     titleKeywords: ["建筑", "建设工程", "城乡规划", "城市规划", "住房", "房地产", "物业", "城市管理", "城镇", "市容", "环境卫生", "园林", "绿化", "城市道路", "城市供水", "燃气", "供热", "排水", "污水", "垃圾"],
   },
   {
     code: "17", name: "交通运输",
     authorities: ["交通运输部", "交通厅", "交通局"],
-    titleKeywords: ["交通运输", "公路", "道路运输", "水路", "港口", "航道", "船舶", "海上交通", "出租汽车", "公共汽车", "城市公共交通", "客运", "货运"],
+    titleKeywords: ["交通运输", "公路", "道路运输", "水路", "港口", "航道", "船舶", "海上交通", "出租汽车", "公共汽车", "城市公共交通", "客运", "货运", "轨道交通"],
   },
   {
     code: "18", name: "水利",
@@ -124,27 +124,27 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   },
   {
     code: "20", name: "商务",
-    authorities: ["商务部", "商务厅"],
-    titleKeywords: ["商务", "外贸", "进出口", "对外贸易", "外商投资", "自由贸易", "电子商务", "拍卖", "典当", "报废汽车"],
+    authorities: ["商务部", "商务厅", "对外贸易经济合作部", "外经贸"],
+    titleKeywords: ["商务", "外贸", "进出口", "对外贸易", "外商投资", "自由贸易", "电子商务", "拍卖", "典当", "报废汽车", "出口管制"],
   },
   {
     code: "21", name: "文化和旅游",
-    authorities: ["文化和旅游部", "文化厅", "旅游局"],
+    authorities: ["文化和旅游部", "文化厅", "旅游局", "文化部"],
     titleKeywords: ["文化", "旅游", "文物", "非物质文化遗产", "文化遗产", "古建筑", "图书馆", "博物馆", "文化市场", "娱乐", "演出", "导游", "景区"],
   },
   {
     code: "22", name: "卫生健康",
-    authorities: ["卫生健康委", "卫计委", "卫生厅"],
-    titleKeywords: ["卫生", "医疗", "医院", "医师", "护士", "传染病", "疫苗", "药品", "献血", "母婴", "计划生育", "精神卫生", "职业病", "食品安全"],
+    authorities: ["卫生健康委", "卫计委", "卫生厅", "卫生部"],
+    titleKeywords: ["卫生", "医疗", "医院", "医师", "护士", "传染病", "疫苗", "药品", "献血", "母婴", "计划生育", "精神卫生", "职业病", "食品安全", "中医药", "器官", "遗体"],
   },
   {
     code: "23", name: "退役军人事务",
-    authorities: ["退役军人事务部"],
+    authorities: ["退役军人事务部", "退役军人部"],
     titleKeywords: ["退役军人", "退伍", "复员"],
   },
   {
     code: "24", name: "应急管理",
-    authorities: ["应急管理部", "应急管理厅"],
+    authorities: ["应急管理部", "应急管理厅", "安全生产监督管理"],
     titleKeywords: ["应急", "安全生产", "危险化学品", "烟花爆竹", "矿山", "消防", "防灾", "减灾", "救灾", "地震"],
   },
   {
@@ -185,7 +185,7 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   {
     code: "32", name: "能源",
     authorities: ["能源局"],
-    titleKeywords: ["能源", "电力", "煤炭", "石油", "天然气", "可再生能源"],
+    titleKeywords: ["能源", "电力", "煤炭", "石油", "天然气", "可再生能源", "原子能"],
   },
   {
     code: "33", name: "烟草",
@@ -194,8 +194,8 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   },
   {
     code: "34", name: "林业和草原",
-    authorities: ["林业和草原局", "林业厅"],
-    titleKeywords: ["森林", "林业", "草原", "湿地", "野生动物", "自然保护区", "国家公园", "陆生野生"],
+    authorities: ["林业和草原局", "林业厅", "林草局"],
+    titleKeywords: ["森林", "林业", "草原", "湿地", "野生动物", "自然保护区", "国家公园", "陆生野生", "林地"],
   },
   {
     code: "35", name: "铁路",
@@ -215,7 +215,7 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   {
     code: "38", name: "文物",
     authorities: ["文物局"],
-    titleKeywords: ["文物", "考古", "古建筑"],
+    titleKeywords: ["文物", "考古", "古建筑", "城墙"],
   },
   {
     code: "39", name: "药品监督管理",
@@ -224,7 +224,7 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   },
   {
     code: "40", name: "知识产权",
-    authorities: ["知识产权局"],
+    authorities: ["知识产权局", "版权局"],
     titleKeywords: ["知识产权", "专利", "商标", "著作权", "版权"],
   },
   {
@@ -239,8 +239,8 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   },
   {
     code: "43", name: "金融",
-    authorities: ["金融监管", "银保监", "证监"],
-    titleKeywords: ["金融", "银行", "保险", "证券", "基金", "信托", "期货"],
+    authorities: ["金融监管", "银保监", "证监", "人民银行"],
+    titleKeywords: ["金融", "银行", "保险", "证券", "基金", "信托", "期货", "反洗钱"],
   },
   {
     code: "44", name: "医疗保障",
@@ -300,12 +300,12 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   {
     code: "55", name: "海事",
     authorities: ["海事局"],
-    titleKeywords: ["海事", "海上交通", "船舶"],
+    titleKeywords: ["海事", "海上交通", "船舶", "海商"],
   },
   {
     code: "56", name: "移民管理",
     authorities: ["移民管理局"],
-    titleKeywords: ["出入境", "外国人", "移民"],
+    titleKeywords: ["出入境", "外国人", "移民", "出境入境", "护照"],
   },
   {
     code: "57", name: "海警",
@@ -314,7 +314,7 @@ export const INDUSTRY_KEYWORDS: IndustryKeywords[] = [
   },
   {
     code: "58", name: "国有资产监管",
-    authorities: ["国有资产监督"],
+    authorities: ["国有资产监督", "国资委"],
     titleKeywords: ["国有资产", "国企"],
   },
   {
@@ -386,6 +386,11 @@ export function matchIndustries(
 
   // 按分数降序
   matches.sort((a, b) => b.score - a.score);
+
+  // 当最高分是"人民政府"(code=00)且有更具体的第二结果时，优先使用第二结果
+  if (matches.length >= 2 && matches[0].code === '00' && matches[1].code !== '99') {
+    [matches[0], matches[1]] = [matches[1], matches[0]];
+  }
 
   // 取前3个，标记主分类
   const result = matches.slice(0, 3).map((m, i) => ({

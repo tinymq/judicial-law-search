@@ -6,7 +6,6 @@ import { extractBasisLawNames } from '@/src/lib/legal-basis-parser';
 import type { Metadata } from 'next';
 import OverviewCards from './OverviewCards';
 import CategoryChart from './CategoryChart';
-import DomainChart from './DomainChart';
 import LawLevelChart from './LawLevelChart';
 import TopLawsTable from './TopLawsTable';
 import ReuseChart from './ReuseChart';
@@ -16,6 +15,7 @@ import ParentChildByTypeChart from './ParentChildByTypeChart';
 import CitationCountChart from './CitationCountChart';
 import EfficacyDensityChart from './EfficacyDensityChart';
 import LawClusterChart from './LawClusterChart';
+import IndustryChart from './IndustryChart';
 import ProvinceSelector from './ProvinceSelector';
 
 export const dynamic = 'force-dynamic';
@@ -98,22 +98,15 @@ export default async function AnalyticsPage({
     const child = childByTypeMap[t.category] || 0;
     const total = top + child;
     return {
-      category: t.category,
+      category: t.category === '其他执法事项' ? '其他' : t.category,
       topLevel: top,
       child,
       childRatio: total > 0 ? `${((child / total) * 100).toFixed(1)}%` : '0%',
     };
   });
 
-  // C: Domain/Body distribution
+  // C: Domain field (used by DomainLevelChart cross table)
   const domainField = selectedProvince ? 'enforcementBody' : 'enforcementDomain';
-  const domainStats = await prisma.enforcementItem.groupBy({
-    by: [domainField as any],
-    _count: { id: true },
-    where: { ...where, [domainField]: { not: null } },
-    orderBy: { _count: { id: 'desc' } },
-    take: 15,
-  });
 
   // D: Law level distribution + efficacy density (ENHANCED: include lawId for density calc)
   const itemsWithLaw = await prisma.enforcementItem.findMany({
@@ -143,6 +136,33 @@ export default async function AnalyticsPage({
     }))
     .filter(d => d.lawCount > 0)
     .sort((a, b) => b.density - a.density);
+
+  // D2: Industry distribution
+  const industryStats = await prisma.enforcementItem.groupBy({
+    by: ['industryId'],
+    _count: { id: true },
+    where: { ...where, industryId: { not: null } },
+    orderBy: { _count: { id: 'desc' } },
+    take: 15,
+  });
+  const industryIds = industryStats.map(s => s.industryId!);
+  const industryDetails = await prisma.industry.findMany({
+    where: { id: { in: industryIds } },
+    select: { id: true, name: true },
+  });
+  const industryNameMap = new Map(industryDetails.map(i => [i.id, i.name]));
+  const industryLawCounts = await prisma.law.groupBy({
+    by: ['industryId'],
+    _count: { id: true },
+    where: { industryId: { in: industryIds } },
+  });
+  const industryLawMap = new Map(industryLawCounts.map(l => [l.industryId!, l._count.id]));
+  const industryChartData = industryStats.map(s => ({
+    id: s.industryId!,
+    name: industryNameMap.get(s.industryId!) || '未知',
+    itemCount: s._count.id,
+    lawCount: industryLawMap.get(s.industryId!) || 0,
+  }));
 
   // E: Top referenced laws (all + local)
   const topLaws = await prisma.enforcementItem.groupBy({
@@ -325,7 +345,7 @@ export default async function AnalyticsPage({
           province={selectedProvince}
         />
 
-        {/* Row 1: Category + ParentChild + LawLevel (3 columns) */}
+        {/* Row 1: Category + ParentChild + Industry (3 columns) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
           <CategoryChart
             data={categoryStats.map(s => ({ category: s.category, count: s._count.id }))}
@@ -335,17 +355,12 @@ export default async function AnalyticsPage({
             data={parentChildData}
             province={selectedProvince}
           />
-          <LawLevelChart data={lawLevelStats} province={selectedProvince} />
+          <IndustryChart data={industryChartData} province={selectedProvince} />
         </div>
 
-        {/* Row 2: Domain + EfficacyDensity (2 columns) */}
+        {/* Row 2: LawLevel + EfficacyDensity (2 columns) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <DomainChart
-            data={domainStats.map((s: any) => ({ name: s[domainField] || '未知', count: s._count.id }))}
-            title={selectedProvince ? '执法部门分布 TOP15' : '执法领域分布 TOP15'}
-            province={selectedProvince}
-            isDomain={!selectedProvince}
-          />
+          <LawLevelChart data={lawLevelStats} province={selectedProvince} />
           <EfficacyDensityChart data={densityData} province={selectedProvince} />
         </div>
 

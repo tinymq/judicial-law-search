@@ -90,7 +90,7 @@ export default function LawFilterBar({
         <FoldableFilterRow
           label="位阶"
           items={levels}
-          visibleCount={10}
+          visibleCount={levels.length}
           isSelected={(l) => selectedLevel === l.level}
           renderItem={(l) => (
             <Link

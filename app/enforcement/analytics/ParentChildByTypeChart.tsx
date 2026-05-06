@@ -37,7 +37,7 @@ export default function ParentChildByTypeChart({ data }: Props) {
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         {data
-          .filter(d => d.childRatio !== '0%' && d.childRatio !== '0.0%' || d.category === '其他执法事项')
+          .filter(d => d.childRatio !== '0%' && d.childRatio !== '0.0%' || d.category === '其他')
           .map(d => (
           <div key={d.category} className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-slate-50">
             <span className="text-slate-600">{d.category}</span>
