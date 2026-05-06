@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -10,20 +11,46 @@ const LEVEL_COLORS: Record<string, string> = {
   '地方政府规章': '#ca8a04',
 };
 
+interface LawItem {
+  id: number;
+  title: string;
+  level: string;
+  count: number;
+}
+
 interface Props {
-  data: { id: number; title: string; level: string; count: number }[];
+  data: LawItem[];
+  localData?: LawItem[];
   province: string;
 }
 
-export default function TopLawsTable({ data, province }: Props) {
-  const maxCount = data.length > 0 ? data[0].count : 1;
+export default function TopLawsTable({ data, localData, province }: Props) {
+  const [showLocal, setShowLocal] = useState(false);
+  const displayData = showLocal && localData ? localData : data;
+  const maxCount = displayData.length > 0 ? displayData[0].count : 1;
   const pq = province ? `&province=${province}` : '';
 
   return (
     <div className="bg-white rounded-xl border border-slate-200/60 p-5">
-      <h3 className="text-base font-semibold text-slate-800 mb-4">高引用法规 TOP20</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold text-slate-800">
+          {showLocal ? '地方法规引用 TOP20' : '高引用法规 TOP20'}
+        </h3>
+        {localData && localData.length > 0 && (
+          <button
+            onClick={() => setShowLocal(!showLocal)}
+            className="text-sm font-medium px-3 py-1 rounded-lg transition-colors"
+            style={{
+              backgroundColor: showLocal ? '#16a34a18' : '#f1f5f9',
+              color: showLocal ? '#16a34a' : '#64748b',
+            }}
+          >
+            {showLocal ? '← 全部法规' : `仅看地方法规 (${localData.length})`}
+          </button>
+        )}
+      </div>
       <div className="space-y-1.5">
-        {data.map((law, i) => (
+        {displayData.map((law, i) => (
           <div key={law.id} className="flex items-center gap-3 group">
             <span className="w-6 text-right text-xs font-medium text-slate-400 tabular-nums shrink-0">
               {i + 1}
@@ -62,6 +89,9 @@ export default function TopLawsTable({ data, province }: Props) {
             </div>
           </div>
         ))}
+        {displayData.length === 0 && (
+          <p className="text-sm text-slate-400 text-center py-8">暂无数据</p>
+        )}
       </div>
     </div>
   );
