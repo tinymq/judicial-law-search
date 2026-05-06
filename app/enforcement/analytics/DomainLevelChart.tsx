@@ -61,8 +61,8 @@ export default function DomainLevelChart({ data, levels, title, province, isDoma
               type="category"
               dataKey="domain"
               tick={{ fontSize: 11 }}
-              width={100}
-              tickFormatter={(v: string) => v.length > 8 ? v.slice(0, 8) + '…' : v}
+              width={140}
+              tickFormatter={(v: string) => v.length > 12 ? v.slice(0, 12) + '…' : v}
             />
             <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0' }} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -91,7 +91,7 @@ export default function DomainLevelChart({ data, levels, title, province, isDoma
                   className="text-xs px-2 py-1 rounded inline-flex items-center gap-1"
                   style={{ backgroundColor: badge.bg, color: badge.text }}
                 >
-                  <span className="font-medium">{d.domain.length > 6 ? d.domain.slice(0, 6) + '…' : d.domain}</span>
+                  <span className="font-medium">{d.domain}</span>
                   <span className="opacity-70">{depType}</span>
                 </span>
               );
@@ -105,7 +105,7 @@ export default function DomainLevelChart({ data, levels, title, province, isDoma
           {displayData.slice(0, 15).map(d => (
             <Link
               key={d.domain}
-              href={`/enforcement?domain=${encodeURIComponent(d.domain)}${pq}`}
+              href={`/enforcement?${isDomain ? 'domain' : 'body'}=${encodeURIComponent(d.domain)}${pq}`}
               className="px-2 py-0.5 rounded bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
             >
               {d.domain}

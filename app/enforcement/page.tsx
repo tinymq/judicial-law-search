@@ -33,13 +33,14 @@ const PAGE_SIZE = 50;
 export default async function EnforcementPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; level?: string; linked?: string; view?: string; lawLevel?: string; scope?: string; page?: string; lawId?: string; citation?: string; minRef?: string; maxRef?: string; type?: string }>;
+  searchParams: Promise<{ category?: string; industry?: string; q?: string; province?: string; domain?: string; body?: string; level?: string; linked?: string; view?: string; lawLevel?: string; scope?: string; page?: string; lawId?: string; citation?: string; minRef?: string; maxRef?: string; type?: string }>;
 }) {
   const params = await searchParams;
   const selectedCategory = params.category ?? '';
   const selectedIndustry = params.industry ?? '';
   const selectedProvince = params.province ?? '';
   const selectedDomain = params.domain ?? '';
+  const selectedBody = params.body ?? '';
   const selectedLevel = params.level ?? '';
   const selectedLinked = params.linked ?? '';
   const viewMode = params.view ?? '';
@@ -55,6 +56,7 @@ export default async function EnforcementPage({
   if (selectedIndustry) where.industryId = parseInt(selectedIndustry);
   if (selectedProvince) where.province = selectedProvince;
   if (selectedDomain) where.enforcementDomain = selectedDomain;
+  if (selectedBody) where.enforcementBody = selectedBody;
   if (selectedLevel) where.enforcementLevel = { contains: selectedLevel };
   if (params.lawId) where.lawId = parseInt(params.lawId);
   else if (selectedLinked === 'no') where.lawId = null;
@@ -170,12 +172,19 @@ export default async function EnforcementPage({
       select: { id: true, title: true },
     });
     for (const law of matchedLaws) lawLookup[law.title] = law;
-    // 模糊匹配：引用名可能是简称（"广告法"→"中华人民共和国广告法"）或不含年份后缀
+    // 模糊匹配：引用名可能是简称（"广告法"→"中华人民共和国广告法"）或年份后缀格式不同
+    const stripYearSuffix = (s: string) =>
+      s.replace(/[（(]\d{4}年?[^)）]*[)）]$/, '').trim();
     const unmatched = [...allRefNames].filter(n => !lawLookup[n] && n.length >= 3);
     if (unmatched.length > 0) {
       const allLaws = await prisma.law.findMany({ select: { id: true, title: true } });
       for (const name of unmatched) {
-        const found = allLaws.find(l => l.title.startsWith(name) || l.title.endsWith(name));
+        const bare = stripYearSuffix(name);
+        const found = allLaws.find(l => {
+          if (l.title.startsWith(name) || l.title.endsWith(name)) return true;
+          const bareLaw = stripYearSuffix(l.title);
+          return bareLaw === bare || bareLaw.endsWith(bare) || bare.endsWith(bareLaw);
+        });
         if (found) lawLookup[name] = found;
       }
     }
@@ -257,6 +266,7 @@ export default async function EnforcementPage({
     if (selectedIndustry) p.industry = selectedIndustry;
     if (selectedProvince) p.province = selectedProvince;
     if (selectedDomain) p.domain = selectedDomain;
+    if (selectedBody) p.body = selectedBody;
     if (selectedLevel) p.level = selectedLevel;
     if (selectedLinked) p.linked = selectedLinked;
     if (selectedScope) p.scope = selectedScope;
@@ -278,7 +288,7 @@ export default async function EnforcementPage({
   }
 
   // 判断是否有活跃筛选
-  const hasFilters = selectedCategory || selectedIndustry || selectedProvince || selectedDomain || selectedLevel || selectedLinked || selectedScope || query || selectedLawLevel || selectedCitation || selectedMinRef || params.type;
+  const hasFilters = selectedCategory || selectedIndustry || selectedProvince || selectedDomain || selectedBody || selectedLevel || selectedLinked || selectedScope || query || selectedLawLevel || selectedCitation || selectedMinRef || params.type;
 
   // 分析页透视来的筛选标签
   const CITATION_LABELS: Record<string, string> = { single: '单法规引用', multi: '多法规引用', none: '无明确引用' };
@@ -292,6 +302,9 @@ export default async function EnforcementPage({
   if (selectedMinRef || selectedMaxRef) {
     const rangeLabel = selectedMaxRef ? `${selectedMinRef || 1}-${selectedMaxRef}条引用` : `${selectedMinRef}条以上引用`;
     analyticsFilters.push({ label: `复用度: ${rangeLabel}`, clearHref: buildQuery({ minRef: '', maxRef: '' }) });
+  }
+  if (selectedBody) {
+    analyticsFilters.push({ label: `执法部门: ${selectedBody}`, clearHref: buildQuery({ body: '' }) });
   }
   if (params.lawId) {
     const lawTitle = items[0]?.law?.title;
@@ -327,7 +340,7 @@ export default async function EnforcementPage({
 
       {/* Sticky title + search + filter */}
       {(() => {
-        const activeFilterCount = [selectedProvince, selectedScope, selectedLevel, selectedDomain, selectedLawLevel, selectedLinked, selectedCitation].filter(Boolean).length;
+        const activeFilterCount = [selectedProvince, selectedScope, selectedLevel, selectedDomain, selectedBody, selectedLawLevel, selectedLinked, selectedCitation].filter(Boolean).length;
         return (
       <div className="sticky top-14 z-10 bg-[var(--color-bg-primary,#faf8f5)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
@@ -367,6 +380,7 @@ export default async function EnforcementPage({
                 {selectedIndustry && <input type="hidden" name="industry" value={selectedIndustry} />}
                 {selectedProvince && <input type="hidden" name="province" value={selectedProvince} />}
                 {selectedDomain && <input type="hidden" name="domain" value={selectedDomain} />}
+                {selectedBody && <input type="hidden" name="body" value={selectedBody} />}
                 {selectedLevel && <input type="hidden" name="level" value={selectedLevel} />}
                 {selectedLinked && <input type="hidden" name="linked" value={selectedLinked} />}
                 {selectedScope && <input type="hidden" name="scope" value={selectedScope} />}

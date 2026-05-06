@@ -16,6 +16,7 @@ import ParentChildByTypeChart from './ParentChildByTypeChart';
 import CitationCountChart from './CitationCountChart';
 import EfficacyDensityChart from './EfficacyDensityChart';
 import LawClusterChart from './LawClusterChart';
+import ProvinceSelector from './ProvinceSelector';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,10 +27,8 @@ export const metadata: Metadata = {
 const PROVINCE_OPTIONS = [
   { code: '', label: '全部省份' },
   { code: '330000', label: '浙江' },
-  { code: '430000', label: '湖南' },
-  { code: '460000', label: '海南' },
-  { code: '370000', label: '山东' },
   { code: '320000', label: '江苏' },
+  { code: '430000', label: '湖南' },
 ];
 
 const LAW_DOMAIN_CLUSTERS = [
@@ -312,21 +311,7 @@ export default async function AnalyticsPage({
               基于 {provinceName} 执法事项数据的多维度统计分析
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {PROVINCE_OPTIONS.map(p => (
-              <Link
-                key={p.code}
-                href={p.code ? `/enforcement/analytics?province=${p.code}` : '/enforcement/analytics'}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  selectedProvince === p.code
-                    ? 'bg-slate-800 text-white shadow-sm'
-                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
-                }`}
-              >
-                {p.label}
-              </Link>
-            ))}
-          </div>
+          <ProvinceSelector options={PROVINCE_OPTIONS} selected={selectedProvince} />
         </div>
 
         {/* A: Overview Cards */}
@@ -378,14 +363,10 @@ export default async function AnalyticsPage({
           <LawClusterChart data={lawClusterData} province={selectedProvince} />
         </div>
 
-        {/* Row 4: Reuse + CitationCount (2 columns) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Row 4: Reuse + CitationCount + CitationPie (3 columns) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
           <ReuseChart data={reuseData} province={selectedProvince} />
           <CitationCountChart data={citationCountData} total={citationTotal} province={selectedProvince} />
-        </div>
-
-        {/* Row 5: CitationPie (overview) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <CitationPie singleLaw={singleLaw} multiLaw={multiLaw} noRef={noRef} province={selectedProvince} />
         </div>
 

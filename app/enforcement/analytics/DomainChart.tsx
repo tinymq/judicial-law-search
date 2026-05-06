@@ -39,7 +39,7 @@ export default function DomainChart({ data, title, province, isDomain }: Props) 
         {data.slice(0, 10).map(d => (
           <Link
             key={d.name}
-            href={`/enforcement?domain=${encodeURIComponent(d.name)}${pq}`}
+            href={`/enforcement?${isDomain ? 'domain' : 'body'}=${encodeURIComponent(d.name)}${pq}`}
             className="text-xs px-2 py-1 rounded bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
           >
             {d.name} ({d.count})
