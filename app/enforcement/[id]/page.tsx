@@ -4,6 +4,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { prisma } from '@/src/lib/db';
 import { notFound } from 'next/navigation';
 import { getCategoryColor, LEVEL_COLORS } from '@/src/lib/enforcement-constants';
+import { parseLegalBasis, extractBasisLawNames } from '@/src/lib/legal-basis-parser';
 import LinkLawEditor from './LinkLawEditor';
 import type { Metadata } from 'next';
 
@@ -22,18 +23,6 @@ export async function generateMetadata({
   return { title: item ? `${item.name} - 执法事项` : '执法事项未找到' };
 }
 
-// 从执法依据文本中提取《》内的法规名称
-function extractLawNames(text: string): string[] {
-  const cleaned = text.replace(/\n/g, '');
-  const matches = cleaned.match(/《([^》]+)》/g);
-  if (!matches) return [];
-  const names = new Set<string>();
-  for (const m of matches) {
-    const name = m.slice(1, -1).replace(/\s+/g, '').trim();
-    if (name.length > 3) names.add(name);
-  }
-  return Array.from(names);
-}
 
 // 规范化法规名称用于匹配
 function normalizeLawName(name: string): string {
@@ -45,11 +34,12 @@ function normalizeLawName(name: string): string {
     .trim();
 }
 
-// 将《》内的法规名渲染为链接（优先匹配到的法规直接跳转，否则搜索）
-function renderLegalBasisText(
+// 将《》内匹配到法规库的部分渲染为链接，其余保持普通文本
+function renderBracketParts(
   text: string,
   lawNameToId: Map<string, number>,
-) {
+  keyPrefix: string,
+): React.ReactNode[] {
   const parts = text.split(/(《[^》]+》)/g);
   return parts.map((part, i) => {
     const match = part.match(/^《(.+)》$/);
@@ -58,29 +48,57 @@ function renderLegalBasisText(
       const lawId = lawNameToId.get(name);
       if (lawId) {
         return (
-          <Link
-            key={i}
-            href={`/law/${lawId}`}
+          <Link key={`${keyPrefix}-${i}`} href={`/law/${lawId}`}
             className="text-blue-600 hover:text-blue-800 hover:underline underline-offset-2"
-            title={`查看法规详情`}
-          >
-            {part}
-          </Link>
+            title="查看法规详情">{part}</Link>
         );
       }
-      return (
-        <Link
-          key={i}
-          href={`/?q=${encodeURIComponent(match[1])}`}
-          className="text-blue-500/70 hover:text-blue-700 hover:underline underline-offset-2"
-          title={`搜索"${match[1]}"`}
-        >
-          {part}
-        </Link>
-      );
     }
-    return <span key={i}>{part}</span>;
+    return <span key={`${keyPrefix}-${i}`}>{part}</span>;
   });
+}
+
+// 格式化展示执法依据：多条空行分隔，法规名（含无《》的）渲染为链接
+function renderLegalBasisText(
+  text: string,
+  lawNameToId: Map<string, number>,
+) {
+  const entries = parseLegalBasis(text);
+  if (entries.length === 0) return renderBracketParts(text, lawNameToId, '0');
+
+  const elements: React.ReactNode[] = [];
+
+  entries.forEach((entry, idx) => {
+    if (idx > 0) elements.push(<span key={`sep-${idx}`}>{'\n\n'}</span>);
+
+    const raw = entry.rawText;
+    const hasBracketName = /^(?:\d+[.．、]?\s*)?《/.test(raw);
+
+    if (!hasBracketName && entry.lawName) {
+      const namePos = raw.indexOf(entry.lawName);
+      if (namePos >= 0) {
+        const before = raw.substring(0, namePos);
+        const after = raw.substring(namePos + entry.lawName.length);
+        if (before) elements.push(<span key={`${idx}-b`}>{before}</span>);
+        const lawId = lawNameToId.get(entry.lawName);
+        if (lawId) {
+          elements.push(
+            <Link key={`${idx}-n`} href={`/law/${lawId}`}
+              className="text-blue-600 hover:text-blue-800 hover:underline underline-offset-2"
+              title="查看法规详情">{entry.lawName}</Link>
+          );
+        } else {
+          elements.push(<span key={`${idx}-n`}>{entry.lawName}</span>);
+        }
+        elements.push(...renderBracketParts(after, lawNameToId, `${idx}-a`));
+        return;
+      }
+    }
+
+    elements.push(...renderBracketParts(raw, lawNameToId, `${idx}`));
+  });
+
+  return elements;
 }
 
 export default async function EnforcementDetailPage({
@@ -104,8 +122,8 @@ export default async function EnforcementDetailPage({
 
   if (!item) return notFound();
 
-  // 从执法依据中提取所有引用的法规名，查库匹配
-  const citedNames = item.legalBasisText ? extractLawNames(item.legalBasisText) : [];
+  // 从执法依据中提取每条依据的法规名（不含条文正文中的交叉引用）
+  const citedNames = item.legalBasisText ? extractBasisLawNames(item.legalBasisText) : [];
   let matchedLaws: { id: number; title: string; level: string | null; issuingAuthority: string | null; lawGroupId: string | null; effectiveDate: Date | null }[] = [];
   const lawNameToId = new Map<string, number>();
 
@@ -120,17 +138,18 @@ export default async function EnforcementDetailPage({
       select: { id: true, title: true, level: true, issuingAuthority: true, lawGroupId: true, effectiveDate: true },
     });
 
-    // 对每个引用的法规名进行匹配
+    // 对每个引用的法规名进行匹配（精确优先，模糊仅允许后缀匹配避免子串误匹配）
     const seenGroups = new Set<string>(); // 按 lawGroupId 去重，同组只保留最新版
     for (const cited of citedNames) {
       const normCited = normalizeLawName(cited);
-      // 找到所有匹配的法规，取最新版
-      const candidates: typeof dbLaws = [];
-      for (const law of dbLaws) {
-        const normTitle = normalizeLawName(law.title);
-        if (normTitle === normCited || normTitle.includes(normCited) || normCited.includes(normTitle)) {
-          candidates.push(law);
-        }
+      // 精确匹配优先
+      let candidates = dbLaws.filter(law => normalizeLawName(law.title) === normCited);
+      // 后缀匹配：引用名是法规名的后缀（如"广告法"→"中华人民共和国广告法"）
+      if (candidates.length === 0) {
+        candidates = dbLaws.filter(law => {
+          const normTitle = normalizeLawName(law.title);
+          return normTitle.endsWith(normCited) || normCited.endsWith(normTitle);
+        });
       }
       if (candidates.length === 0) continue;
 
@@ -331,8 +350,8 @@ export default async function EnforcementDetailPage({
           </div>
         </div>
 
-        {/* 执法依据 — 核心区域 */}
-        {item.legalBasisText && (
+        {/* 执法依据 — 父事项不展示（拼合文本不可读，子事项各有独立依据） */}
+        {item.legalBasisText && item.children.length === 0 && (
           <div className="bg-white rounded-xl border border-slate-200/60 p-5 mb-4">
             <h2 className="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -344,15 +363,17 @@ export default async function EnforcementDetailPage({
           </div>
         )}
 
-        {/* 关联法规（含手动修改入口） */}
-        <LinkLawEditor
-          enforcementItemId={item.id}
-          linkedLaws={matchedLaws.map(l => ({ id: l.id, title: l.title, level: l.level, issuingAuthority: l.issuingAuthority }))}
-          primaryLawId={item.lawId}
-        />
+        {/* 关联法规（含手动修改入口）— 父事项不展示 */}
+        {item.children.length === 0 && (
+          <LinkLawEditor
+            enforcementItemId={item.id}
+            linkedLaws={matchedLaws.map(l => ({ id: l.id, title: l.title, level: l.level, issuingAuthority: l.issuingAuthority }))}
+            primaryLawId={item.lawId}
+          />
+        )}
 
-        {/* 检查详情 */}
-        {(item.checkTarget || item.checkContent || item.checkMethod) && (
+        {/* 检查详情：仅行政检查类事项展示 */}
+        {item.category === '行政检查' && (item.checkTarget || item.checkContent) && (
           <div className="bg-white rounded-xl border border-slate-200/60 p-5 mb-4">
             <h2 className="text-lg font-semibold text-slate-800 mb-3">检查详情</h2>
             <div className="space-y-3">
@@ -366,12 +387,6 @@ export default async function EnforcementDetailPage({
                 <div>
                   <dt className="text-sm text-slate-400">检查内容</dt>
                   <dd className="text-base text-slate-800 mt-0.5 whitespace-pre-wrap">{item.checkContent}</dd>
-                </div>
-              )}
-              {item.checkMethod && (
-                <div>
-                  <dt className="text-sm text-slate-400">检查方式</dt>
-                  <dd className="text-base text-slate-800 mt-0.5">{item.checkMethod}</dd>
                 </div>
               )}
             </div>

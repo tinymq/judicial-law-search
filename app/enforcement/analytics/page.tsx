@@ -37,9 +37,9 @@ export default async function AnalyticsPage({
 
   const where: any = selectedProvince ? { province: selectedProvince } : {};
 
-  // A: Overview stats (exclude parent items from unlinked count since they naturally have no lawId)
+  // A: Overview stats (顶层事项口径：排除子事项，子事项在"综合事项"维度单独展示)
   const totalItems = await prisma.enforcementItem.count({ where: { ...where, parentId: null } });
-  const linkedItems = await prisma.enforcementItem.count({ where: { ...where, lawId: { not: null } } });
+  const linkedItems = await prisma.enforcementItem.count({ where: { ...where, parentId: null, lawId: { not: null } } });
   const parentCount = await prisma.enforcementItem.count({ where: { ...where, children: { some: {} } } });
   const childCount = await prisma.enforcementItem.count({ where: { ...where, parentId: { not: null } } });
   const distinctLaws = await prisma.enforcementItem.groupBy({

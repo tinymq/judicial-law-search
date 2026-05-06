@@ -6,6 +6,7 @@ import HoverDetails from '@/components/HoverDetails';
 import { prisma } from '@/src/lib/db';
 import { ENFORCEMENT_CATEGORIES } from '@/src/lib/industry-config';
 import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR, LEVEL_COLORS, getCategoryColor } from '@/src/lib/enforcement-constants';
+import { extractBasisLawNames } from '@/src/lib/legal-basis-parser';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -151,11 +152,15 @@ export default async function EnforcementPage({
     ? await prisma.enforcementItem.count({ where: { ...(selectedProvince ? { province: selectedProvince } : {}), parentId: { not: null } } })
     : 0;
 
-  // 批量匹配当前页所有《法规名》到法规库
+  // 批量匹配当前页所有执法依据法规名到法规库（仅提取每条依据的法规名，不含正文交叉引用）
   const allRefNames = new Set<string>();
+  const itemBasisNames = new Map<number, string[]>();
   for (const item of items) {
-    const refs = item.legalBasisText?.match(/《([^》]+)》/g);
-    if (refs) refs.forEach(r => allRefNames.add(r.slice(1, -1)));
+    if (item.legalBasisText) {
+      const names = extractBasisLawNames(item.legalBasisText);
+      names.forEach(n => allRefNames.add(n));
+      itemBasisNames.set(item.id, names);
+    }
   }
   const lawLookup: Record<string, { id: number; title: string }> = {};
   if (allRefNames.size > 0) {
@@ -198,7 +203,7 @@ export default async function EnforcementPage({
   });
 
   // 获取法规关联统计
-  const linkedCount = await prisma.enforcementItem.count({ where: { lawId: { not: null } } });
+  const linkedCount = await prisma.enforcementItem.count({ where: { parentId: null, lawId: { not: null } } });
 
   // 省份事项统计
   const provinceStats = await prisma.enforcementItem.groupBy({
@@ -852,15 +857,14 @@ export default async function EnforcementPage({
                         )}
                         {/* 单/多法规标签 */}
                         {(() => {
-                          const refs = item.legalBasisText?.match(/《[^》]+》/g);
-                          if (!refs && !item.law) return null;
-                          const uniqueRefs = refs ? [...new Set(refs)] : [];
-                          if (uniqueRefs.length > 1) return (
+                          const basisNames = itemBasisNames.get(item.id) || [];
+                          if (basisNames.length === 0 && !item.law) return null;
+                          if (basisNames.length > 1) return (
                             <Link href={buildQuery({ citation: 'multi' })} className="px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100 transition-colors">
                               多法规
                             </Link>
                           );
-                          if (uniqueRefs.length === 1 || item.law) return (
+                          if (basisNames.length === 1 || item.law) return (
                             <Link href={buildQuery({ citation: 'single' })} className="px-2 py-0.5 rounded text-xs font-medium bg-slate-50 text-slate-500 border border-slate-100 hover:bg-slate-100 transition-colors">
                               单法规
                             </Link>
@@ -894,8 +898,7 @@ export default async function EnforcementPage({
 
                         {/* 来源法规 */}
                         {(() => {
-                          const textRefs = item.legalBasisText?.match(/《([^》]+)》/g)?.map(s => s.slice(1, -1)) || [];
-                          const uniqueNames = [...new Set(textRefs)];
+                          const uniqueNames = itemBasisNames.get(item.id) || [];
                           if (uniqueNames.length === 0 && !item.law) return null;
                           // 单法规且已关联：直接展示链接
                           if (uniqueNames.length <= 1 && item.law) {
