@@ -179,6 +179,8 @@ model InspectionStandard {
   lawId              Int?
   /// 创建时间
   createdAt          DateTime          @default(now())
+  /// 更新时间
+  updatedAt          DateTime          @default(now()) @updatedAt
   /// 关联执法事项
   enforcementItem    EnforcementItem   @relation(fields: [enforcementItemId], references: [id], onDelete: Cascade)
   /// 关联法规

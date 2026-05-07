@@ -21,6 +21,8 @@ interface LawItem {
   status: string | null;
   level: string;
   region: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
 }
 
 interface LawTableProps {
@@ -66,6 +68,8 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
     documentNumber: 100,
     promulgationDate: 100,
     effectiveDate: 100,
+    createdAt: 100,
+    updatedAt: 100,
   });
 
   const handleSort = (field: string) => {
@@ -86,6 +90,15 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
     if (!date) return '';
     const d = new Date(date);
     return d.toISOString().split('T')[0];
+  };
+
+  const formatDateShort = (date: string | Date | null | undefined) => {
+    if (!date) return '';
+    const d = new Date(date);
+    const yy = String(d.getFullYear()).slice(2);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yy}/${mm}/${dd}`;
   };
 
   const SortIcon = ({ field }: { field: string }) => {
@@ -191,7 +204,7 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
 
       {/* 桌面端表格容器 */}
       <div className="hidden md:block border border-slate-200 rounded-xl shadow-sm bg-white" style={{ overflowX: 'clip' }}>
-          <table className="w-full text-sm border-separate" style={{ tableLayout: 'fixed', minWidth: '1110px', borderSpacing: 0 }}>
+          <table className="w-full text-sm border-separate" style={{ tableLayout: 'fixed', minWidth: '1310px', borderSpacing: 0 }}>
             <thead className="bg-slate-50">
               <tr className="border-b-2 border-slate-200">
                 <ResizableHeader
@@ -267,6 +280,26 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                   stickyTop={stickyTop}
                 >
                   施行日期<SortIcon field="effectiveDate" />
+                </ResizableHeader>
+                <ResizableHeader
+                  width={getColumnWidth('createdAt')}
+                  onResize={(e, data) => handleColumnResize('createdAt', e, data)}
+                  dataKey="createdAt"
+                  className="cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort('createdAt')}
+                  stickyTop={stickyTop}
+                >
+                  录入日期<SortIcon field="createdAt" />
+                </ResizableHeader>
+                <ResizableHeader
+                  width={getColumnWidth('updatedAt')}
+                  onResize={(e, data) => handleColumnResize('updatedAt', e, data)}
+                  dataKey="updatedAt"
+                  className="cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort('updatedAt')}
+                  stickyTop={stickyTop}
+                >
+                  修改日期<SortIcon field="updatedAt" />
                 </ResizableHeader>
                 <th
                   className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase"
@@ -355,6 +388,12 @@ export default function LawTable({ laws, currentSort, currentOrder, searchParams
                         onBlur={(e) => handleUpdateLaw(law.id, { effectiveDate: e.target.value ? new Date(e.target.value) : null })}
                         title={formatDateForInput(law.effectiveDate) || '暂无日期'}
                     />
+                  </td>
+                  <td className="px-3 py-3 text-xs text-slate-400" style={{ width: `${getColumnWidth('createdAt')}px` }}>
+                    {formatDateShort(law.createdAt)}
+                  </td>
+                  <td className="px-3 py-3 text-xs text-slate-400" style={{ width: `${getColumnWidth('updatedAt')}px` }}>
+                    {formatDateShort(law.updatedAt)}
                   </td>
                   <td className="px-3 py-3 text-center" style={{ width: '100px' }}>
                     <div className="flex items-center justify-center gap-1">
