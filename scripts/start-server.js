@@ -5,7 +5,7 @@ const cwd = path.resolve(__dirname, '..');
 const nextBin = require.resolve('next/dist/bin/next');
 const port = process.env.PORT || '3000';
 
-const child = spawn(process.execPath, [nextBin, 'start', '-H', '0.0.0.0', '-p', port], {
+const child = spawn(process.execPath, [nextBin, 'dev', '-H', '0.0.0.0', '-p', port], {
   cwd,
   stdio: 'inherit',
   env: {

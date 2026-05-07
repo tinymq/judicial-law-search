@@ -117,6 +117,10 @@ export default async function EnforcementDetailPage({
         select: { id: true, name: true, lawId: true, law: { select: { id: true, title: true } } },
         orderBy: { sequenceNumber: 'asc' },
       },
+      inspectionStandards: {
+        orderBy: { sequenceNumber: 'asc' },
+        include: { linkedLaw: { select: { id: true, title: true } } },
+      },
     },
   });
 
@@ -190,6 +194,22 @@ export default async function EnforcementDetailPage({
         matchedLaws[oldIdx] = primaryLaw;
       } else {
         matchedLaws.unshift(primaryLaw);
+      }
+    }
+  }
+
+  // 将检查标准关联的法规加入 lawNameToId，使《》能渲染为链接
+  for (const std of item.inspectionStandards) {
+    if (std.linkedLaw) {
+      const names = std.law ? extractBasisLawNames(std.law) : [];
+      for (const name of names) {
+        if (!lawNameToId.has(name)) {
+          const normName = normalizeLawName(name);
+          const normTitle = normalizeLawName(std.linkedLaw.title);
+          if (normName === normTitle || normTitle.endsWith(normName) || normName.endsWith(normTitle)) {
+            lawNameToId.set(name, std.linkedLaw.id);
+          }
+        }
       }
     }
   }
@@ -389,6 +409,53 @@ export default async function EnforcementDetailPage({
                   <dd className="text-base text-slate-800 mt-0.5 whitespace-pre-wrap">{item.checkContent}</dd>
                 </div>
               )}
+              {item.checkMethod && (
+                <div>
+                  <dt className="text-sm text-slate-400">检查方式</dt>
+                  <dd className="text-base text-slate-800 mt-0.5">{item.checkMethod}</dd>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 检查标准：仅行政检查类事项且有数据时展示 */}
+        {item.category === '行政检查' && item.inspectionStandards.length > 0 && (
+          <div className="bg-white rounded-xl border border-slate-200/60 p-5 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-slate-800">检查标准</h2>
+              <span className="text-sm text-slate-400">{item.inspectionStandards.length} 项</span>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {item.inspectionStandards.map((s, idx) => (
+                <div key={s.id} className="py-3 first:pt-0 last:pb-0">
+                  <div className="flex gap-3">
+                    <span className="text-sm font-medium text-slate-300 shrink-0 w-6 text-right">{idx + 1}</span>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div>
+                        <dt className="text-xs text-slate-400">检查项</dt>
+                        <dd className="text-sm font-medium text-slate-800 mt-0.5">{s.checkItem}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-slate-400">检查内容</dt>
+                        <dd className="text-sm text-slate-700 mt-0.5">{s.checkContent}</dd>
+                      </div>
+                      {s.checkOperate && (
+                        <div>
+                          <dt className="text-xs text-slate-400">检查标准</dt>
+                          <dd className="text-sm text-slate-600 mt-0.5">{s.checkOperate}</dd>
+                        </div>
+                      )}
+                      {s.law && (
+                        <div>
+                          <dt className="text-xs text-slate-400">实施依据</dt>
+                          <dd className="text-sm text-slate-600 mt-0.5">{renderBracketParts(s.law, lawNameToId, `std-${s.id}`)}</dd>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

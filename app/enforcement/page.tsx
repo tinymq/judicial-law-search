@@ -57,7 +57,8 @@ export default async function EnforcementPage({
   if (selectedIndustry) where.industryId = parseInt(selectedIndustry);
   if (selectedProvince) where.province = selectedProvince;
   if (selectedDomain) where.enforcementDomain = selectedDomain;
-  if (selectedBody) where.enforcementBody = selectedBody;
+  if (selectedBody === '__none__') where.enforcementBody = null;
+  else if (selectedBody) where.enforcementBody = selectedBody;
   if (selectedLevel) where.enforcementLevel = { contains: selectedLevel };
   if (params.lawId) where.lawId = parseInt(params.lawId);
   else if (selectedLinked === 'no') where.lawId = null;
@@ -305,7 +306,9 @@ export default async function EnforcementPage({
     const rangeLabel = selectedMaxRef ? `${selectedMinRef || 1}-${selectedMaxRef}条引用` : `${selectedMinRef}条以上引用`;
     analyticsFilters.push({ label: `复用度: ${rangeLabel}`, clearHref: buildQuery({ minRef: '', maxRef: '' }) });
   }
-  if (selectedBody) {
+  if (selectedBody === '__none__') {
+    analyticsFilters.push({ label: '未标注部门', clearHref: buildQuery({ body: '' }) });
+  } else if (selectedBody) {
     analyticsFilters.push({ label: `执法部门: ${selectedBody}`, clearHref: buildQuery({ body: '' }) });
   }
   if (params.lawId) {
@@ -587,6 +590,16 @@ export default async function EnforcementPage({
                       }`}
                     >
                       综合事项
+                    </Link>
+                    <Link
+                      href={buildQuery({ body: selectedBody === '__none__' ? '' : '__none__' })}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                        selectedBody === '__none__'
+                          ? 'bg-amber-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      未标注部门
                     </Link>
                   </div>
                 </div>

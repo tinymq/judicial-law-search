@@ -17,6 +17,7 @@ import EfficacyDensityChart from './EfficacyDensityChart';
 import LawClusterChart from './LawClusterChart';
 import IndustryChart from './IndustryChart';
 import ProvinceSelector from './ProvinceSelector';
+import InspectionStandardsSection from './InspectionStandardsSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -297,6 +298,54 @@ export default async function AnalyticsPage({
     .map(([cluster, agg]) => ({ cluster, itemCount: agg.itemCount, lawCount: agg.lawIds.size }))
     .sort((a, b) => b.itemCount - a.itemCount);
 
+  // J: Inspection Standards Analysis
+  const checkItemsForStandards = await prisma.enforcementItem.findMany({
+    where: { ...where, category: '行政检查' },
+    select: {
+      id: true,
+      enforcementDomain: true,
+      enforcementBody: true,
+      _count: { select: { inspectionStandards: true } },
+    },
+  });
+  const checkItemsTotal2 = checkItemsForStandards.length;
+  const itemsWithStandards = checkItemsForStandards.filter(i => i._count.inspectionStandards > 0).length;
+  const totalStandardsCount = checkItemsForStandards.reduce((sum, i) => sum + i._count.inspectionStandards, 0);
+  const avgStandardsPerItem = itemsWithStandards > 0 ? totalStandardsCount / itemsWithStandards : 0;
+
+  const stdCountArr = checkItemsForStandards
+    .filter(i => i._count.inspectionStandards > 0)
+    .map(i => i._count.inspectionStandards);
+  const standardsDist = [
+    { label: '1-3项', count: stdCountArr.filter(c => c <= 3).length },
+    { label: '4-5项', count: stdCountArr.filter(c => c >= 4 && c <= 5).length },
+    { label: '6-10项', count: stdCountArr.filter(c => c >= 6 && c <= 10).length },
+    { label: '11-20项', count: stdCountArr.filter(c => c >= 11 && c <= 20).length },
+    { label: '20+项', count: stdCountArr.filter(c => c > 20).length },
+  ];
+
+  const domainStdMap: Record<string, { total: number; withStd: number; stdCount: number }> = {};
+  for (const item of checkItemsForStandards) {
+    const d = (selectedProvince ? item.enforcementBody : item.enforcementDomain) as string | null;
+    if (!d) continue;
+    if (!domainStdMap[d]) domainStdMap[d] = { total: 0, withStd: 0, stdCount: 0 };
+    domainStdMap[d].total++;
+    if (item._count.inspectionStandards > 0) {
+      domainStdMap[d].withStd++;
+      domainStdMap[d].stdCount += item._count.inspectionStandards;
+    }
+  }
+  const domainStdData = Object.entries(domainStdMap)
+    .map(([domain, stats]) => ({
+      domain,
+      total: stats.total,
+      withStandards: stats.withStd,
+      avgStandards: stats.withStd > 0 ? Math.round(stats.stdCount / stats.withStd * 10) / 10 : 0,
+    }))
+    .filter(d => d.total >= 5)
+    .sort((a, b) => b.avgStandards - a.avgStandards)
+    .slice(0, 12);
+
   const provinceName = PROVINCE_OPTIONS.find(p => p.code === selectedProvince)?.label || '全部省份';
 
   return (
@@ -396,6 +445,21 @@ export default async function AnalyticsPage({
             dependencyTypes={selectedProvince ? dependencyTypes : undefined}
           />
         </div>
+
+        {/* J: Inspection Standards Analysis (full width) */}
+        {checkItemsTotal2 > 0 && totalStandardsCount > 0 && (
+          <div className="mt-6">
+            <InspectionStandardsSection
+              checkItemsTotal={checkItemsTotal2}
+              itemsWithStandards={itemsWithStandards}
+              totalStandards={totalStandardsCount}
+              avgPerItem={avgStandardsPerItem}
+              distribution={standardsDist}
+              domainData={domainStdData}
+              province={selectedProvince}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

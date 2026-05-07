@@ -72,6 +72,7 @@ model Law {
   industry                  Industry?   @relation(fields: [industryId], references: [id])
   lawIndustries             LawIndustry[]
   enforcementItems          EnforcementItem[]
+  inspectionStandards       InspectionStandard[]
   feedbacks                 LawFeedback[]
 
   @@index([title])
@@ -136,6 +137,10 @@ model EnforcementItem {
   parent             EnforcementItem?  @relation("ParentChild", fields: [parentId], references: [id])
   /// 子事项列表
   children           EnforcementItem[] @relation("ParentChild")
+  /// 来源系统ID - 如浙江政务服务网的 localInnerCode (UUID)
+  sourceId           String?
+  /// 检查标准列表
+  inspectionStandards InspectionStandard[]
 
   @@index([category])
   @@index([province])
@@ -147,6 +152,40 @@ model EnforcementItem {
   @@index([itemStatus])
   @@index([lawId])
   @@index([parentId])
+  @@index([sourceId])
+}
+
+/// 检查标准表 - 行政检查事项的检查标准明细
+model InspectionStandard {
+  /// 主键ID
+  id                 Int               @id @default(autoincrement())
+  /// 关联执法事项ID
+  enforcementItemId  Int
+  /// 序号
+  sequenceNumber     Int               @default(0)
+  /// 检查项名称
+  checkItem          String
+  /// 检查内容
+  checkContent       String
+  /// 检查操作/方式
+  checkOperate       String?
+  /// 法律依据
+  law                String?
+  /// 内容层级
+  contentLevel       String?
+  /// 检查类型
+  checkType          String?
+  /// 关联法规ID - 关联Law表，由匹配脚本写入
+  lawId              Int?
+  /// 创建时间
+  createdAt          DateTime          @default(now())
+  /// 关联执法事项
+  enforcementItem    EnforcementItem   @relation(fields: [enforcementItemId], references: [id], onDelete: Cascade)
+  /// 关联法规
+  linkedLaw          Law?              @relation(fields: [lawId], references: [id])
+
+  @@index([enforcementItemId])
+  @@index([lawId])
 }
 
 /// 条表 - 存储法规的"条"，是法规的基本层级
